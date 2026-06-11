@@ -193,7 +193,7 @@ app.get('/logout', (req, res) => {
  }); 
  
  // 5. PROSES AKSI: Menangani tombol Review, Approve, atau Reject 
- app.post('/action-wo/:id', upload.none(), (req, res) => { 
+ app.post('/action-wo/:id', upload.any(), (req, res) => { 
      if (!req.session.user) return res.redirect('/login'); 
  
      const woId = req.params.id; 
@@ -204,13 +204,13 @@ app.get('/logout', (req, res) => {
      let updateData = {}; 
      let message = ""; 
  
-     if (role === 'Supervisor' && action === 'review') { 
+     if ((role === 'Supervisor' || role === 'Super Admin') && action === 'review') { 
          updateData = { status: 'Reviewed', reviewed_by: userId }; 
          message = "Work Order berhasil diverifikasi dan diteruskan ke Manager!"; 
-     } else if (role === 'Manager' && action === 'approve') { 
+     } else if ((role === 'Manager' || role === 'Super Admin') && action === 'approve') { 
          updateData = { status: 'Approved', approved_by: userId }; 
          message = "Work Order resmi disetujui (Approved)!"; 
-     } else if (role === 'Pemohon' && action === 'complete') { 
+     } else if ((role === 'Pemohon' || role === 'Super Admin') && action === 'complete') { 
          // Mengira jumlah kos automatik 
          const total = parseFloat(req.body.biaya_manpower || 0) + parseFloat(req.body.biaya_material || 0) + parseFloat(req.body.biaya_lain || 0); 
          
@@ -225,17 +225,38 @@ app.get('/logout', (req, res) => {
              total_biaya: total 
          }; 
          message = "Pekerjaan telah diselesaikan! Menunggu verifikasi Supervisor."; 
-     } else if (action === 'verify') {
+     } else if ((role === 'Supervisor' || role === 'Super Admin') && action === 'verify') {
          updateData = { 
              verified_by: userId 
          };
          message = "Hasil pekerjaan telah diverifikasi!";
-     } else if (action === 'close') {
-         updateData = { status: 'Closed' };
-         message = "Work Order telah ditutup (Closed)!";
+     } else if ((role === 'Pemohon' || role === 'Super Admin') && action === 'close') {
+         updateData = { status: 'Closed', received_by: userId };
+         message = "Work Order Resmi DITUTUP (Closed). Terima kasih!";
      } else if (action === 'reject') { 
          updateData = { status: 'Draft' }; // Dikembalikan jadi draft agar bisa diedit pemohon lagi 
          message = "Work Order ditolak dan dikembalikan ke Pemohon."; 
+     } else if ((role === 'Pemohon' || role === 'Super Admin') && action === 'resubmit') { 
+         // Tangkap nama file lama dari input tersembunyi 
+         let finalLampiran = req.body.old_lampiran || null; 
+ 
+         // Jika user mengunggah file baru, proses filenya dan TIMPA file yang lama 
+         if (req.files && req.files.length > 0) { 
+             // Filter hanya file dengan fieldname 'lampiran_file' 
+             const lampiranFiles = req.files.filter(file => file.fieldname === 'lampiran_file'); 
+             if (lampiranFiles.length > 0) { 
+                 const paths = lampiranFiles.map(file => '/uploads/' + file.filename); 
+                 finalLampiran = paths.join(','); 
+             } 
+         } 
+ 
+         updateData = { 
+             uraian_pekerjaan: req.body.uraian_pekerjaan, 
+             lokasi: req.body.lokasi, 
+             lampiran: finalLampiran, // <--- Menyimpan update lampiran ke database 
+             status: 'Submitted' 
+         }; 
+         message = "Work Order berhasil diperbaiki dan diajukan ulang!"; 
      } 
  
      const sql = 'UPDATE work_orders SET ? WHERE id = ?'; 

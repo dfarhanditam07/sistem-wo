@@ -8,11 +8,53 @@
 
 <style>
 
-body{
-    background:#cfcfcf;
-    margin:0;
-    padding:40px 0;
-    font-family:Arial, sans-serif;
+body {
+    background: #f4f7f6;
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding-bottom: 50px;
+}
+
+.navbar {
+    background-color: #0f4c81;
+    color: white;
+    padding: 15px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.navbar-brand {
+    font-size: 20px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.navbar-user {
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.btn-back {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 8px 15px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.btn-back:hover {
+    background: white;
+    color: #0f4c81;
 }
 
 .paper{
@@ -205,7 +247,17 @@ td,th{
 </head>
 <body>
 
-<div style="max-width: 820px; margin: 20px auto 10px auto;"> 
+    <nav class="navbar">
+        <div class="navbar-brand">
+            ⚓ Port System WO
+        </div>
+        <div class="navbar-user">
+            <span>Formulir aktif oleh: <strong><%= user.nama %></strong></span>
+            <a href="/" class="btn-back">← Kembali ke Dashboard</a>
+        </div>
+    </nav>
+
+    <div style="max-width: 820px; margin: 20px auto 10px auto;"> 
     <div class="breadcrumbs"> 
         <a href="/">Dashboard</a> 
         <span class="separator">/</span> 
@@ -275,34 +327,33 @@ td,th{
                      <input type="text" class="input-line" name="no_wo" value="<%= wo ? wo.no_wo : '' %>" <%= wo ? 'readonly' : '' %> required> 
                  </td> 
                  <td> 
-                     <textarea class="textarea-lines" name="uraian_pekerjaan" <%= wo ? 'readonly' : '' %> required><%= wo ? wo.uraian_pekerjaan : '' %></textarea> 
+                     <textarea class="textarea-lines" name="uraian_pekerjaan" <%= wo && wo.status !== 'Draft' ? 'readonly' : '' %> required><%= wo ? wo.uraian_pekerjaan : '' %></textarea> 
                  </td> 
                  <td> 
-                     <textarea class="textarea-lines" name="lokasi" <%= wo ? 'readonly' : '' %> required><%= wo ? wo.lokasi : '' %></textarea> 
+                     <textarea class="textarea-lines" name="lokasi" <%= wo && wo.status !== 'Draft' ? 'readonly' : '' %> required><%= wo ? wo.lokasi : '' %></textarea> 
                  </td> 
                  <td> 
-                    <% if (!wo) { %> 
-                        <div class="bold">Upload Lampiran:</div> 
-                        <input type="file" name="lampiran_file" accept=".jpg,.png,.pdf" multiple style="margin-top: 10px;"> 
-                        <br>
-
-                        <small style="color: #666; font-size: 11px;">
-                            * Dapat mengunggah hingga 5 file sekaligus.
-                            <br>
-                            * Jenis lampiran yang dapat diunggah: Laporan Kerusakan, Gambar Desain, Spesifikasi/Brosur, dan RAB.
-                            <br>
-                            * Gunakan nama file yang sesuai dengan jenis dokumen yang diunggah.
-                            <br>
-                            * Contoh: WO12345_Laporan Kerusakan.pdf, WO12345_Gambar Desain.pdf.
-                        </small>
-
-                    <% } else { %>
+                     <% if (!wo || (wo && wo.status === 'Draft')) { %> 
+                         <div class="bold">Upload Bukti / RAB:</div> 
+                         <input type="file" name="lampiran_file" accept=".jpg,.png,.pdf" multiple style="margin-top: 10px;"> 
+                         <br> 
+                         <small style="color: #666; font-size: 11px;">* Maks 5 file sekaligus (Abaikan jika tidak ingin mengganti file lama)</small> 
+                         
+                         <% if (wo && wo.lampiran) { %> 
+                             <div style="margin-top: 10px; font-size: 12px; background: #e9ecef; padding: 5px; border-radius: 4px;"> 
+                                 <span style="color: #0c5460; font-weight: bold;">✔ Dokumen lama tersimpan.</span><br> 
+                                 <span style="color: #555;">(Upload file baru di atas HANYA JIKA ingin mengganti file yang lama)</span> 
+                             </div> 
+                             <input type="hidden" name="old_lampiran" value="<%= wo.lampiran %>"> 
+                         <% } %> 
+ 
+                     <% } else { %> 
                          <div class="bold">File Lampiran:</div> 
                          <br> 
                          <% if (wo.lampiran) { %> 
                              <% const fileArray = wo.lampiran.split(','); %> 
                              <% fileArray.forEach((file, index) => { %> 
-                                 <a href="<%= file %>" target="_blank" style="display: inline-block; padding: 5px 10px; margin-bottom: 5px; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;"> 
+                                 <a href="<%= file %>" target="_blank" style="display: inline-block; padding: 5px 10px; margin-bottom: 5px; background-color: #0f4c81; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;"> 
                                      📄 Buka Dokumen <%= index + 1 %> 
                                  </a><br> 
                              <% }) %> 
@@ -340,14 +391,18 @@ td,th{
                  <button type="submit" style="padding: 10px 30px; font-size: 16px; background-color: #4CAF50; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;"> 
                      Submit Pengajuan WO 
                  </button> 
-             <% } else if (wo.status === 'Submitted' && user.role === 'Supervisor') { %> 
+             <% } else if (wo && wo.status === 'Draft' && (user.id === wo.prepared_by || user.role === 'Super Admin')) { %> 
+                 <button type="submit" name="action" value="resubmit" style="padding: 10px 30px; font-size: 16px; background-color: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;"> 
+                     🔄 Ajukan Ulang WO 
+                 </button> 
+             <% } else if (wo.status === 'Submitted' && (user.role === 'Supervisor' || user.role === 'Super Admin')) { %> 
                  <button type="submit" name="action" value="review" style="padding: 10px 30px; font-size: 16px; background-color: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 5px; margin-right: 10px;"> 
                      ✓ Review & Verifikasi 
                  </button> 
                  <button type="submit" name="action" value="reject" style="padding: 10px 30px; font-size: 16px; background-color: #dc3545; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;"> 
                      ✕ Tolak WO 
                  </button> 
-             <% } else if (wo.status === 'Reviewed' && user.role === 'Manager') { %> 
+             <% } else if (wo.status === 'Reviewed' && (user.role === 'Manager' || user.role === 'Super Admin')) { %> 
                  <button type="submit" name="action" value="approve" style="padding: 10px 30px; font-size: 16px; background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 5px; margin-right: 10px;"> 
                      ███ Approve Final 
                  </button> 
@@ -357,8 +412,6 @@ td,th{
              <% } %> 
  
              <br><br> 
-         <br><br> 
-             <a href="/" style="text-decoration: none; color: #555; font-weight: bold;">← Kembali ke Dashboard</a> 
          </div> 
  
          <div class="section-title">LEMBAR PENYELESAIAN (Diisi oleh Pelaksana/Pemohon)</div> 
@@ -367,20 +420,20 @@ td,th{
              <tr> 
                  <td width="40%"> 
                      <div class="bold">Detail Pekerjaan yang Dilakukan:</div> 
-                     <textarea class="textarea-lines" name="detail_pekerjaan" <%= wo && wo.status === 'Approved' && user.id === wo.prepared_by ? '' : 'readonly' %>><%= wo ? (wo.detail_pekerjaan || (wo.status === 'Approved' ? wo.uraian_pekerjaan : '')) : '' %></textarea> 
+                     <textarea class="textarea-lines" name="detail_pekerjaan" <%= wo && wo.status === 'Approved' && (user.id === wo.prepared_by || user.role === 'Super Admin') ? '' : 'readonly' %>><%= wo ? (wo.detail_pekerjaan || (wo.status === 'Approved' ? wo.uraian_pekerjaan : '')) : '' %></textarea> 
                  </td> 
                  <td width="30%"> 
                      <div class="bold">Completion Status:</div> 
-                     <textarea class="textarea-lines" name="completion_status" <%= wo && wo.status === 'Approved' && user.id === wo.prepared_by ? '' : 'readonly' %>><%= wo ? wo.completion_status : '' %></textarea> 
+                     <textarea class="textarea-lines" name="completion_status" <%= wo && wo.status === 'Approved' && (user.id === wo.prepared_by || user.role === 'Super Admin') ? '' : 'readonly' %>><%= wo ? wo.completion_status : '' %></textarea> 
                  </td> 
                  <td width="30%"> 
                      <div class="bold">Biaya Aktual (Jika Ada):</div> 
                      <div style="margin-top:10px;"> 
-                         <div>Manpower: Rp <input type="number" name="biaya_manpower" class="cost-input" style="width: 100px;" value="<%= wo ? wo.biaya_manpower : '0' %>" <%= wo && wo.status === 'Approved' && user.id === wo.prepared_by ? '' : 'readonly' %>></div> 
+                         <div>Manpower: Rp <input type="number" name="biaya_manpower" class="cost-input" style="width: 100px;" value="<%= wo ? wo.biaya_manpower : '0' %>" <%= wo && wo.status === 'Approved' && (user.id === wo.prepared_by || user.role === 'Super Admin') ? '' : 'readonly' %>></div> 
                          <br> 
-                         <div>Material: Rp <input type="number" name="biaya_material" class="cost-input" style="width: 100px;" value="<%= wo ? wo.biaya_material : '0' %>" <%= wo && wo.status === 'Approved' && user.id === wo.prepared_by ? '' : 'readonly' %>></div> 
+                         <div>Material: Rp <input type="number" name="biaya_material" class="cost-input" style="width: 100px;" value="<%= wo ? wo.biaya_material : '0' %>" <%= wo && wo.status === 'Approved' && (user.id === wo.prepared_by || user.role === 'Super Admin') ? '' : 'readonly' %>></div> 
                          <br> 
-                         <div>Lain-lain: Rp <input type="number" name="biaya_lain" class="cost-input" style="width: 100px;" value="<%= wo ? wo.biaya_lain : '0' %>" <%= wo && wo.status === 'Approved' && user.id === wo.prepared_by ? '' : 'readonly' %>></div> 
+                         <div>Lain-lain: Rp <input type="number" name="biaya_lain" class="cost-input" style="width: 100px;" value="<%= wo ? wo.biaya_lain : '0' %>" <%= wo && wo.status === 'Approved' && (user.id === wo.prepared_by || user.role === 'Super Admin') ? '' : 'readonly' %>></div> 
                      </div> 
                  </td> 
              </tr> 
@@ -406,21 +459,21 @@ td,th{
              </tr> 
          </table>
 
-         <% if (wo && wo.status === 'Approved' && user.id === wo.prepared_by) { %> 
+         <% if (wo && wo.status === 'Approved' && (user.id === wo.prepared_by || user.role === 'Super Admin')) { %> 
             <div style="text-align: center; margin-top: 30px;">
                  <button type="submit" name="action" value="complete" style="padding: 10px 30px; font-size: 16px; background-color: #ff9800; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;"> 
                      ⚙️ Simpan & Selesaikan Pekerjaan 
                  </button> 
             </div>
- 
-         <% } else if (wo && wo.status === 'Completed' && !wo.verified_by && user.role === 'Supervisor') { %> 
+
+         <% } else if (wo && wo.status === 'Completed' && !wo.verified_by && (user.role === 'Supervisor' || user.role === 'Super Admin')) { %> 
             <div style="text-align: center; margin-top: 30px;">
                  <button type="submit" name="action" value="verify" style="padding: 10px 30px; font-size: 16px; background-color: #17a2b8; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;"> 
                      🔍 Verifikasi Hasil Pekerjaan 
                  </button> 
             </div>
- 
-         <% } else if (wo && wo.status === 'Completed' && wo.verified_by && user.id === wo.prepared_by) { %> 
+
+         <% } else if (wo && wo.status === 'Completed' && wo.verified_by && (user.id === wo.prepared_by || user.role === 'Super Admin')) { %> 
             <div style="text-align: center; margin-top: 30px;">
                  <button type="submit" name="action" value="close" style="padding: 10px 30px; font-size: 16px; background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;"> 
                      🤝 Terima Hasil & Close WO 
