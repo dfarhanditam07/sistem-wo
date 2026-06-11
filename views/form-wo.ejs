@@ -170,9 +170,55 @@ td,th{
     text-align: center;
 }
 
+/* Styling Breadcrumbs ala Material-UI */ 
+.breadcrumbs { 
+    display: flex; 
+    align-items: center; 
+    font-size: 14px; 
+    margin-bottom: 25px; 
+    color: #666; 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+} 
+
+.breadcrumbs a { 
+    color: #0f4c81; /* Warna biru maritim */ 
+    text-decoration: none; 
+    transition: text-decoration 0.2s ease-in-out; 
+} 
+
+.breadcrumbs a:hover { 
+    text-decoration: underline; 
+} 
+
+.breadcrumbs .separator { 
+    margin: 0 10px; 
+    color: #aaa; 
+    font-size: 12px; 
+} 
+
+.breadcrumbs .current { 
+    color: #333; 
+    font-weight: 600; 
+}
+
 </style>
 </head>
 <body>
+
+<div style="max-width: 820px; margin: 20px auto 10px auto;"> 
+    <div class="breadcrumbs"> 
+        <a href="/">Dashboard</a> 
+        <span class="separator">/</span> 
+        
+        <% if (!wo) { %> 
+            <span class="current">Buat WO Baru</span> 
+        <% } else { %> 
+            <a href="/">Daftar Work Order</a> 
+            <span class="separator">/</span> 
+            <span class="current">Detail (<%= wo.no_wo %>)</span> 
+        <% } %> 
+    </div> 
+</div>
 
 <div class="paper">
 
