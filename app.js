@@ -1,4 +1,5 @@
 // 1. Memanggil library yang sudah kita instal
+require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql2');
 const path = require('path');
@@ -9,13 +10,12 @@ const multer = require('multer');
 const app = express();
 const PORT = 3000;
 
-// 2. Konfigurasi Koneksi Database MySQL
-// Sesuaikan dengan pengaturan komputermu (default XAMPP biasanya seperti di bawah ini)
+// 2. Konfigurasi Koneksi Database (Ambil dari .env)
 const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',       // Username default XAMPP
-    password: '',       // Password default XAMPP biasanya kosong
-    database: 'work-order-db' // Nama database yang kita buat di awal
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME
 });
 
 // Mengecek apakah database berhasil terhubung
@@ -38,7 +38,7 @@ app.use(express.json());
 
 // Mengaktifkan sistem Session untuk Login nanti
 app.use(session({
-    secret: 'rahasia_sistem_wo',
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: true
 }));
@@ -193,7 +193,7 @@ app.get('/logout', (req, res) => {
  }); 
  
  // 5. PROSES AKSI: Menangani tombol Review, Approve, atau Reject 
- app.post('/action-wo/:id', (req, res) => { 
+ app.post('/action-wo/:id', upload.none(), (req, res) => { 
      if (!req.session.user) return res.redirect('/login'); 
  
      const woId = req.params.id; 
