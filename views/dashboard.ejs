@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Sistem Work Order</title>
+    <style>
+        /* Pengaturan Dasar selaras dengan Login */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #f4f7f6; /* Abu-abu kebiruan sangat terang */
+            margin: 0; 
+            color: #333;
+        }
+
+        /* Navbar Atas bergaya Maritim */
+        .navbar {
+            background-color: #0f4c81; /* Biru Navy selaras dengan login */
+            color: white;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .navbar-brand {
+            font-size: 20px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .navbar-user {
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* Container & Card Layout */
+        .container { 
+            max-width: 1100px; 
+            margin: 40px auto; 
+            padding: 0 20px; 
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .page-header h3 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 22px;
+        }
+
+        .card {
+            background: white; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+            overflow: hidden; /* Agar sudut tabel ikut melengkung */
+        }
+
+        /* Desain Tombol Modern */
+        .btn { 
+            padding: 10px 18px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            text-decoration: none; 
+            font-weight: 600; 
+            font-size: 14px; 
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+
+        .btn-primary { 
+            background: #0f4c81; 
+            color: white; 
+            box-shadow: 0 2px 5px rgba(15, 76, 129, 0.3);
+        }
+        .btn-primary:hover { background: #0a365d; transform: translateY(-1px); }
+
+        .btn-outline {
+            background: transparent;
+            color: #0f4c81;
+            border: 1px solid #0f4c81;
+            padding: 6px 15px;
+            font-size: 13px;
+        }
+        .btn-outline:hover { background: #0f4c81; color: white; }
+
+        .btn-danger { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 15px; }
+        .btn-danger:hover { background: #dc3545; border-color: #dc3545; }
+
+        /* Tabel Minimalis & Bersih */
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+        }
+        
+        th, td { 
+            padding: 16px 20px; 
+            text-align: left; 
+            border-bottom: 1px solid #eee; 
+        }
+
+        th { 
+            background-color: #f8f9fc; 
+            color: #555;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fdfdfd; }
+
+        /* Status Badges berbentuk Pill (Kapsul) */
+        .status-badge { 
+            padding: 6px 12px; 
+            border-radius: 50px; 
+            font-size: 12px; 
+            font-weight: 700; 
+            display: inline-block; 
+            letter-spacing: 0.3px;
+        }
+        
+        .Draft { background: #e2e3e5; color: #383d41; }
+        .Submitted { background: #fff3cd; color: #856404; }
+        .Reviewed { background: #cce5ff; color: #004085; }
+        .Approved { background: #d4edda; color: #155724; }
+        .Completed { background: #d1ecf1; color: #0c5460; }
+        .Closed { background: #198754; color: white; }
+
+        .empty-state { text-align: center; padding: 40px !important; color: #888; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="navbar-brand">
+        ⚓ Port System WO
+    </div>
+    <div class="navbar-user">
+        <span>Halo, <strong><%= user.nama %></strong> (<%= user.role %>)</span>
+        <a href="/logout" class="btn btn-danger">Logout</a>
+    </div>
+</nav>
+
+<div class="container">
+    
+    <div class="page-header">
+        <h3>Daftar Work Order</h3>
+        <% if (user.role === 'Pemohon') { %>
+            <a href="/create-wo" class="btn btn-primary">+ Buat WO Baru</a>
+        <% } %>
+    </div>
+
+    <div class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th width="15%">No. WO</th>
+                    <th width="30%">Uraian Pekerjaan</th>
+                    <th width="20%">Lokasi</th>
+                    <th width="15%">Status</th>
+                    <th width="10%">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if (workOrders.length === 0) { %>
+                    <tr>
+                        <td colspan="5" class="empty-state">Belum ada data Work Order yang masuk.</td>
+                    </tr>
+                <% } else { %>
+                    <% workOrders.forEach(wo => { %>
+                        <tr>
+                            <td><strong><%= wo.no_wo %></strong></td>
+                            <td><%= wo.uraian_pekerjaan.length > 50 ? wo.uraian_pekerjaan.substring(0, 50) + '...' : wo.uraian_pekerjaan %></td>
+                            <td><%= wo.lokasi %></td>
+                            <td>
+                                <span class="status-badge <%= wo.status %>"><%= wo.status %></span>
+                            </td>
+                            <td>
+                                <a href="/view-wo/<%= wo.id %>" class="btn btn-outline">Buka Form</a>
+                            </td>
+                        </tr>
+                    <% }) %>
+                <% } %>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+</body>
+</html>

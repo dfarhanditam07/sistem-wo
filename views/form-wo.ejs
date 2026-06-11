@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>WO Form</title>
+
+<style>
+
+body{
+    background:#cfcfcf;
+    margin:0;
+    padding:40px 0;
+    font-family:Arial, sans-serif;
+}
+
+.paper{
+    width:820px;
+    min-height:1120px;
+    background:#fff;
+    margin:auto;
+    padding:40px;
+    box-shadow:0 0 10px rgba(0,0,0,.2);
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+td,th{
+    border:1px solid #444;
+    padding:4px;
+    vertical-align:top;
+}
+
+.center{
+    text-align:center;
+}
+
+.bold{
+    font-weight:bold;
+}
+
+.header-title{
+    font-size:18px;
+    font-weight:bold;
+}
+
+.header-sub{
+    font-size:16px;
+    font-weight:bold;
+}
+
+.logo-box{
+    width:170px;
+    text-align:center;
+    vertical-align: center;
+}
+
+.logo{
+    width:120px;
+    /* margin-top:10px; */
+}
+
+.section-title{
+    text-align:center;
+    font-weight:bold;
+    font-size:18px;
+    margin:25px 0 15px;
+    text-decoration:underline;
+}
+
+.form-table th{
+    background:#d9e2f3;
+    text-align:center;
+}
+
+.form-table td{
+    height:150px;
+}
+
+.input-line{
+    width:100%;
+    border:none;
+    border-bottom:2px dotted #000;
+    outline:none;
+    font-size:14px;
+    margin-bottom:15px;
+    background:transparent;
+}
+
+.textarea-lines{
+    width:100%;
+    height:120px;
+    border:none;
+    outline:none;
+    resize:none;
+    background:
+        repeating-linear-gradient(
+            to bottom,
+            transparent,
+            transparent 20px,
+            #000 21px
+        );
+    line-height:21px;
+    font-size:14px;
+}
+
+.checkbox-group{
+    margin-top:15px;
+    line-height:1.6;
+    font-size:14px;
+}
+
+.checkbox-group input{
+    width:16px;
+    height:16px;
+}
+
+.sign-table{
+    margin-top:20px;
+}
+
+.sign-table td{
+    border:none;
+    text-align:center;
+    height:120px;
+}
+
+.sign-input{
+    border:none;
+    border-bottom:2px dotted #000;
+    width:150px;
+    text-align:center;
+    font-size:14px;
+    outline:none;
+}
+
+.bottom-title{
+    margin-top:25px;
+    border-top:3px solid #000;
+    padding-top:20px;
+}
+
+.approval-table th{
+    background:#d9e2f3;
+    text-align:center;
+}
+
+.approval-table td{
+    height:220px;
+}
+
+.cost-box{
+    margin-top:10px;
+}
+
+.cost-input{
+    width:140px;
+    border:none;
+    border-bottom:2px dotted #000;
+    outline:none;
+    margin-left:5px;
+}
+
+.small{
+    font-size:13px;
+    text-align: center;
+}
+
+</style>
+</head>
+<body>
+
+<div class="paper">
+
+    <table style="width: 100%; border-collapse: collapse; border: 2px solid #000;">
+        <tr>
+            <td rowspan="2" class="logo-box" style="vertical-align: middle; text-align: center; width: 22%; padding: 15px; border: 1px solid #000;">
+                <img src="/images/logo-enc.png" alt="Logo Kiri" style="max-width: 90px; height: auto; object-fit: contain;">
+            </td>
+
+            <td class="center bold" style="height: 40px; vertical-align: bottom; border: 1px solid #000; border-bottom: none; padding-top: 15px;" colspan="2">
+                <div class="header-title" style="font-size: 22px; letter-spacing: 3px;">FORMULIR</div>
+            </td>
+
+            <td rowspan="2" class="logo-box" style="vertical-align: middle; text-align: center; width: 22%; padding: 10px; border: 1px solid #000;">
+                <img src="/images/logo-ekanuri.png" alt="Logo Eka Nuri" style="max-width: 75px; height: auto; object-fit: contain; margin-bottom: 8px;">
+                <div class="bold" style="font-size: 13px; color: #000;">
+                    PT. EKA NURI
+                </div>
+            </td>
+        </tr>
+
+        <tr>
+            <td class="center" colspan="2" style="vertical-align: top; padding-bottom: 15px; border: 1px solid #000; border-top: none;">
+                <div class="header-title" style="font-size: 18px; font-weight: bold; color: #000; margin-top: 5px;">
+                    INTERNAL WORK ORDER
+                </div>
+                <div class="header-sub" style="font-size: 13px; color: #444; margin-top: 3px;">
+                    (PERINTAH KERJA INTERNAL)
+                </div>
+            </td>
+        </tr>
+
+        <tr style="font-size: 12px; font-weight: bold; text-align: center; background-color: #f9f9f9;">
+            <td style="padding: 8px; border: 1px solid #000; width: 22%;">No Dokumen : FM PS OM 25</td>
+            <td style="padding: 8px; border: 1px solid #000; width: 28%;">Tanggal Efektif : 23 Februari 2026</td>
+            <td style="padding: 8px; border: 1px solid #000; width: 28%;">Revisi : 01/26</td>
+            <td style="padding: 8px; border: 1px solid #000; width: 22%;">Hal : 1 dari 1</td>
+        </tr>
+    </table>
+
+    <div class="section-title">LEMBAR PENGAJUAN</div> 
+ 
+     <form action="<%= wo ? '/action-wo/' + wo.id : '/submit-wo' %>" method="POST" enctype="multipart/form-data"> 
+ 
+         <table class="form-table"> 
+             <tr> 
+                 <th width="14%">Nomor WO</th> 
+                 <th width="46%">Uraian Pekerjaan</th> 
+                 <th width="16%">Lokasi</th> 
+                 <th width="24%">Lampiran</th> 
+             </tr> 
+             <tr> 
+                 <td> 
+                     <input type="text" class="input-line" name="no_wo" value="<%= wo ? wo.no_wo : '' %>" <%= wo ? 'readonly' : '' %> required> 
+                 </td> 
+                 <td> 
+                     <textarea class="textarea-lines" name="uraian_pekerjaan" <%= wo ? 'readonly' : '' %> required><%= wo ? wo.uraian_pekerjaan : '' %></textarea> 
+                 </td> 
+                 <td> 
+                     <textarea class="textarea-lines" name="lokasi" <%= wo ? 'readonly' : '' %> required><%= wo ? wo.lokasi : '' %></textarea> 
+                 </td> 
+                 <td> 
+                    <% if (!wo) { %> 
+                        <div class="bold">Upload Lampiran:</div> 
+                        <input type="file" name="lampiran_file" accept=".jpg,.png,.pdf" multiple style="margin-top: 10px;"> 
+                        <br>
+
+                        <small style="color: #666; font-size: 11px;">
+                            * Dapat mengunggah hingga 5 file sekaligus.
+                            <br>
+                            * Jenis lampiran yang dapat diunggah: Laporan Kerusakan, Gambar Desain, Spesifikasi/Brosur, dan RAB.
+                            <br>
+                            * Gunakan nama file yang sesuai dengan jenis dokumen yang diunggah.
+                            <br>
+                            * Contoh: WO12345_Laporan Kerusakan.pdf, WO12345_Gambar Desain.pdf.
+                        </small>
+
+                    <% } else { %>
+                         <div class="bold">File Lampiran:</div> 
+                         <br> 
+                         <% if (wo.lampiran) { %> 
+                             <% const fileArray = wo.lampiran.split(','); %> 
+                             <% fileArray.forEach((file, index) => { %> 
+                                 <a href="<%= file %>" target="_blank" style="display: inline-block; padding: 5px 10px; margin-bottom: 5px; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;"> 
+                                     📄 Buka Dokumen <%= index + 1 %> 
+                                 </a><br> 
+                             <% }) %> 
+                         <% } else { %> 
+                             <span style="color: red; font-size: 12px;">Tidak ada file terlampir</span> 
+                         <% } %> 
+                     <% } %> 
+                 </td> 
+             </tr> 
+         </table> 
+ 
+         <table class="sign-table"> 
+             <tr> 
+                 <td> 
+                     Prepared by,<br><br><br><br><br><br> 
+                     (<input type="text" class="sign-input" value="<%= wo ? wo.nama_prepared : user.nama %>" readonly>)<br> 
+                     <div class="bold">Dept: <input type="text" value="<%= wo ? wo.dept_prepared : user.departemen %>" readonly style="width:120px;border:none;border-bottom:2px dotted #000;"></div> 
+                 </td> 
+                 <td> 
+                     Reviewed by,<br><br><br><br><br><br> 
+                     (<input type="text" class="sign-input" value="<%= wo ? (wo.nama_reviewed ? wo.nama_reviewed : (wo.status === 'Submitted' && user.role === 'Supervisor' ? user.nama : '')) : '' %>" readonly>)<br> 
+                     <div class="bold">Team Leader/Supv.</div> 
+                 </td> 
+                 <td> 
+                     Approved by,<br><br><br><br><br><br> 
+                     (<input type="text" class="sign-input" value="<%= wo ? (wo.nama_approved ? wo.nama_approved : (wo.status === 'Reviewed' && user.role === 'Manager' ? user.nama : '')) : '' %>" readonly>)<br> 
+                     <div class="bold">Shorebase Manager</div> 
+                 </td> 
+             </tr> 
+         </table> 
+ 
+         <div style="text-align: center; margin-top: 30px; margin-bottom: 30px;"> 
+             
+             <% if (!wo) { %> 
+                 <button type="submit" style="padding: 10px 30px; font-size: 16px; background-color: #4CAF50; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;"> 
+                     Submit Pengajuan WO 
+                 </button> 
+             <% } else if (wo.status === 'Submitted' && user.role === 'Supervisor') { %> 
+                 <button type="submit" name="action" value="review" style="padding: 10px 30px; font-size: 16px; background-color: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 5px; margin-right: 10px;"> 
+                     ✓ Review & Verifikasi 
+                 </button> 
+                 <button type="submit" name="action" value="reject" style="padding: 10px 30px; font-size: 16px; background-color: #dc3545; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;"> 
+                     ✕ Tolak WO 
+                 </button> 
+             <% } else if (wo.status === 'Reviewed' && user.role === 'Manager') { %> 
+                 <button type="submit" name="action" value="approve" style="padding: 10px 30px; font-size: 16px; background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 5px; margin-right: 10px;"> 
+                     ███ Approve Final 
+                 </button> 
+                 <button type="submit" name="action" value="reject" style="padding: 10px 30px; font-size: 16px; background-color: #dc3545; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;"> 
+                     ✕ Tolak WO 
+                 </button> 
+             <% } %> 
+ 
+             <br><br> 
+         <br><br> 
+             <a href="/" style="text-decoration: none; color: #555; font-weight: bold;">← Kembali ke Dashboard</a> 
+         </div> 
+ 
+         <div class="section-title">LEMBAR PENYELESAIAN (Diisi oleh Pelaksana/Pemohon)</div> 
+     
+         <table class="form-table"> 
+             <tr> 
+                 <td width="40%"> 
+                     <div class="bold">Detail Pekerjaan yang Dilakukan:</div> 
+                     <textarea class="textarea-lines" name="detail_pekerjaan" <%= wo && wo.status === 'Approved' && user.id === wo.prepared_by ? '' : 'readonly' %>><%= wo ? (wo.detail_pekerjaan || (wo.status === 'Approved' ? wo.uraian_pekerjaan : '')) : '' %></textarea> 
+                 </td> 
+                 <td width="30%"> 
+                     <div class="bold">Completion Status:</div> 
+                     <textarea class="textarea-lines" name="completion_status" <%= wo && wo.status === 'Approved' && user.id === wo.prepared_by ? '' : 'readonly' %>><%= wo ? wo.completion_status : '' %></textarea> 
+                 </td> 
+                 <td width="30%"> 
+                     <div class="bold">Biaya Aktual (Jika Ada):</div> 
+                     <div style="margin-top:10px;"> 
+                         <div>Manpower: Rp <input type="number" name="biaya_manpower" class="cost-input" style="width: 100px;" value="<%= wo ? wo.biaya_manpower : '0' %>" <%= wo && wo.status === 'Approved' && user.id === wo.prepared_by ? '' : 'readonly' %>></div> 
+                         <br> 
+                         <div>Material: Rp <input type="number" name="biaya_material" class="cost-input" style="width: 100px;" value="<%= wo ? wo.biaya_material : '0' %>" <%= wo && wo.status === 'Approved' && user.id === wo.prepared_by ? '' : 'readonly' %>></div> 
+                         <br> 
+                         <div>Lain-lain: Rp <input type="number" name="biaya_lain" class="cost-input" style="width: 100px;" value="<%= wo ? wo.biaya_lain : '0' %>" <%= wo && wo.status === 'Approved' && user.id === wo.prepared_by ? '' : 'readonly' %>></div> 
+                     </div> 
+                 </td> 
+             </tr> 
+         </table> 
+     
+         <table class="sign-table"> 
+             <tr> 
+                 <td> 
+                     Performed by,<br><br><br><br><br><br> 
+                     (<input type="text" class="sign-input" value="<%= wo && (wo.status === 'Completed' || wo.status === 'Closed') ? wo.nama_prepared : '' %>" readonly>)<br> 
+                     <div class="bold">Pelaksana / Pemohon</div> 
+                 </td> 
+                 <td> 
+                     Verified by,<br><br><br><br><br><br> 
+                     (<input type="text" class="sign-input" value="<%= wo && (wo.status === 'Closed' || wo.verified_by) ? wo.nama_reviewed : '' %>" readonly>)<br> 
+                     <div class="bold">Team Leader/Supv.</div> 
+                 </td> 
+                 <td> 
+                     Received by,<br><br><br><br><br><br> 
+                     (<input type="text" class="sign-input" value="<%= wo && wo.status === 'Closed' ? wo.nama_prepared : '' %>" readonly>)<br> 
+                     <div class="bold">Pemohon</div> 
+                 </td> 
+             </tr> 
+         </table>
+
+         <% if (wo && wo.status === 'Approved' && user.id === wo.prepared_by) { %> 
+            <div style="text-align: center; margin-top: 30px;">
+                 <button type="submit" name="action" value="complete" style="padding: 10px 30px; font-size: 16px; background-color: #ff9800; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;"> 
+                     ⚙️ Simpan & Selesaikan Pekerjaan 
+                 </button> 
+            </div>
+ 
+         <% } else if (wo && wo.status === 'Completed' && !wo.verified_by && user.role === 'Supervisor') { %> 
+            <div style="text-align: center; margin-top: 30px;">
+                 <button type="submit" name="action" value="verify" style="padding: 10px 30px; font-size: 16px; background-color: #17a2b8; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;"> 
+                     🔍 Verifikasi Hasil Pekerjaan 
+                 </button> 
+            </div>
+ 
+         <% } else if (wo && wo.status === 'Completed' && wo.verified_by && user.id === wo.prepared_by) { %> 
+            <div style="text-align: center; margin-top: 30px;">
+                 <button type="submit" name="action" value="close" style="padding: 10px 30px; font-size: 16px; background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;"> 
+                     🤝 Terima Hasil & Close WO 
+                 </button> 
+            </div>
+         <% } %>
+
+     </form> 
+
+</div>
+
+</body>
+</html>
