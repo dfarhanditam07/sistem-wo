@@ -9,7 +9,9 @@
     "dev": "node app.js",
     "build": "echo \"Build completed successfully\"",
     "format": "prettier --write .",
-    "lint": "eslint . --ext .js"
+    "lint": "eslint . --ext .js",
+    "deploy:setup": "npm install",
+    "deploy:restart": "pm2 restart sistem-wo"
   },
   "keywords": [],
   "author": "",
