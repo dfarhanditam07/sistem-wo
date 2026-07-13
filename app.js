@@ -18,13 +18,14 @@ const db = mysql.createPool({
   database: process.env.DB_NAME,
 });
 
-// Mengecek apakah database berhasil terhubung
-db.connect((err) => {
+// BENAR untuk mysql.createPool
+db.getConnection((err, connection) => {
   if (err) {
-    console.error('Gagal terhubung ke database:', err);
-  } else {
-    console.log('✅ Berhasil terhubung ke database MySQL!');
+    console.error('Gagal terhubung ke database:', err.message);
+    return;
   }
+  console.log('Database terhubung dengan sukses melalui Pool!');
+  connection.release();
 });
 
 // 3. Konfigurasi Sistem (Middleware)
