@@ -8,7 +8,7 @@ const multer = require('multer');
 
 // Inisialisasi aplikasi Express
 const app = express();
-const PORT = 3000;
+const PORT = 3005;
 
 // 2. Konfigurasi Koneksi Database (Ambil dari .env)
 const db = mysql.createConnection({
