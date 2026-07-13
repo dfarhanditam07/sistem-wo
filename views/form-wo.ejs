@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>WO Form</title>
+<link rel="icon" type="image/png" href="/images/favicon.png">
+<script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
 
 <style>
 * {
@@ -373,7 +375,8 @@ td,th{
 
     <nav class="navbar">
         <div class="navbar-brand">
-            ⚓ WORK - ORDER
+            <img src="/images/favicon.png" alt="Logo" width="30" height="30" />
+            WORK - ORDER
         </div>
         <div class="navbar-user">
             <span>
@@ -383,7 +386,7 @@ td,th{
                     <small style="opacity: 0.8; font-size: 12px;"><%= user.role %></small>
                 </div>
             </span>
-            <a href="/" class="btn-back">← Kembali ke Dashboard</a>
+            <a href="/" class="btn-back">Kembali ke Dashboard</a>
         </div>
     </nav>
 
@@ -519,25 +522,25 @@ td,th{
              
              <% if (!wo) { %> 
                  <button type="submit" class="btn-action btn-success"> 
-                     📤 Submit Pengajuan WO 
+                    Submit Pengajuan WO 
                  </button> 
              <% } else if (wo && wo.status === 'Draft' && (user.id === wo.prepared_by || user.role === 'Super Admin')) { %> 
                  <button type="submit" name="action" value="resubmit" class="btn-action btn-primary"> 
-                     🔄 Ajukan Ulang WO 
+                    Ajukan Ulang WO 
                  </button> 
              <% } else if (wo.status === 'Submitted' && (user.role === 'Manager' || user.role === 'Super Admin')) { %> 
                  <button type="submit" name="action" value="review" class="btn-action btn-primary"> 
-                     ✓ Review & Verifikasi 
+                    Review & Verifikasi 
                  </button> 
                  <button type="submit" name="action" value="reject" class="btn-action btn-danger"> 
-                     ✕ Tolak WO 
+                    Tolak WO 
                  </button> 
              <% } else if (wo.status === 'Reviewed' && (user.role === 'Supervisor' || user.role === 'Super Admin')) { %> 
                  <button type="submit" name="action" value="approve" class="btn-action btn-success"> 
-                     ✅ Approve Final 
+                    Approve Final 
                  </button> 
                  <button type="submit" name="action" value="reject" class="btn-action btn-danger"> 
-                     ✕ Tolak WO 
+                    Tolak WO 
                  </button> 
              <% } %> 
 
@@ -592,21 +595,21 @@ td,th{
          <% if (wo && wo.status === 'Approved' && (user.id === wo.prepared_by || user.role === 'Super Admin')) { %> 
             <div style="text-align: center; margin-top: 30px;">
                  <button type="submit" name="action" value="complete" class="btn-action btn-warning"> 
-                     ⚙️ Simpan & Selesaikan Pekerjaan 
+                    Simpan & Selesaikan Pekerjaan 
                  </button> 
             </div>
 
          <% } else if (wo && wo.status === 'Completed' && !wo.verified_by && (user.role === 'Supervisor' || user.role === 'Super Admin')) { %> 
             <div style="text-align: center; margin-top: 30px;">
                  <button type="submit" name="action" value="verify" class="btn-action btn-info"> 
-                     🔍 Verifikasi Hasil Pekerjaan 
+                    Verifikasi Hasil Pekerjaan 
                  </button> 
             </div>
 
          <% } else if (wo && wo.status === 'Completed' && wo.verified_by && (user.id === wo.prepared_by || user.role === 'Super Admin')) { %> 
             <div style="text-align: center; margin-top: 30px;">
                  <button type="submit" name="action" value="close" class="btn-action btn-success"> 
-                     🤝 Terima Hasil & Close WO 
+                    Terima Hasil & Close WO 
                  </button> 
             </div>
          <% } %>

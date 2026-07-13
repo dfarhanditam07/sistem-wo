@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Sistem Work Order</title>
+    <link rel="icon" type="image/png" href="/images/favicon.png">
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -338,7 +340,8 @@
 
 <nav class="navbar">
     <div class="navbar-brand">
-        ⚓ WORK - ORDER
+        <img src="/images/favicon.png" alt="Logo" width="30" height="30" />
+        WORK - ORDER
     </div>
     <div class="navbar-user">
         <span>
@@ -348,7 +351,7 @@
                 <small style="opacity: 0.8;"><%= user.role %></small>
             </div>
         </span>
-        <a href="/logout" class="btn btn-danger">🚪 Logout</a>
+        <a href="/logout" class="btn btn-danger">Logout</a>
     </div>
 </nav>
 
@@ -357,22 +360,22 @@
     <!-- Statistics Cards -->
     <div class="stats-grid">
         <div class="stat-card total">
-            <div class="stat-icon">📋</div>
+            <div class="stat-icon"></div>
             <p class="stat-value"><%= workOrders.length %></p>
             <p class="stat-label">Total Work Order</p>
         </div>
         <div class="stat-card submitted">
-            <div class="stat-icon">📤</div>
+            <div class="stat-icon"></div>
             <p class="stat-value"><%= workOrders.filter(wo => wo.status === 'Submitted' || wo.status === 'Reviewed').length %></p>
             <p class="stat-label">Menunggu Persetujuan</p>
         </div>
         <div class="stat-card approved">
-            <div class="stat-icon">✅</div>
+            <div class="stat-icon"></div>
             <p class="stat-value"><%= workOrders.filter(wo => wo.status === 'Approved').length %></p>
             <p class="stat-label">Disetujui</p>
         </div>
         <div class="stat-card completed">
-            <div class="stat-icon">🏁</div>
+            <div class="stat-icon"></div>
             <p class="stat-value"><%= workOrders.filter(wo => wo.status === 'Completed' || wo.status === 'Closed').length %></p>
             <p class="stat-label">Selesai</p>
         </div>
@@ -382,7 +385,7 @@
         <h3>Daftar Work Order</h3>
         <div class="controls">
             <div class="search-box">
-                <span class="search-icon">🔍</span>
+                <span class="search-icon"></span>
                 <input type="text" id="searchInput" placeholder="Cari NO. WO / Uraian...">
             </div>
             <select class="filter-select" id="statusFilter">
