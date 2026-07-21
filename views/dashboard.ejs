@@ -311,6 +311,58 @@
             display: block;
         }
 
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+
+        .modal {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .modal h3 {
+            margin: 0 0 20px 0;
+            color: #2c3e50;
+        }
+
+        .modal-select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .btn-cancel {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .btn-cancel:hover {
+            background: #dee2e6;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .navbar {
@@ -398,7 +450,7 @@
                 <option value="Closed">Closed</option>
             </select>
             <% if (user.role === 'Pemohon') { %>
-                <a href="/create-wo" class="btn btn-primary">+ Buat WO Baru</a>
+                <button id="openModalBtn" class="btn btn-primary">+ Buat WO Baru</button>
             <% } %>
         </div>
     </div>
@@ -408,18 +460,19 @@
             <table id="woTable">
                 <thead>
                     <tr>
-                        <th width="12%">No. WO</th>
-                        <th width="35%">Uraian Pekerjaan</th>
-                        <th width="18%">Lokasi</th>
-                        <th width="15%">Pemohon</th>
-                        <th width="12%">Status</th>
+                        <th width="10%">No. WO</th>
+                        <th width="30%">Uraian Pekerjaan</th>
+                        <th width="10%">Team</th>
+                        <th width="15%">Lokasi</th>
+                        <th width="12%">Pemohon</th>
+                        <th width="10%">Status</th>
                         <th width="8%">Aksi</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
                     <% if (workOrders.length === 0) { %>
                         <tr>
-                            <td colspan="6" class="empty-state">
+                            <td colspan="7" class="empty-state">
                                 <span class="empty-state-icon">📭</span>
                                 Belum ada data Work Order yang masuk.
                             </td>
@@ -429,6 +482,7 @@
                             <tr class="wo-row" data-status="<%= wo.status %>">
                                 <td><strong style="color: #0f4c81;"><%= wo.no_wo %></strong></td>
                                 <td><%= wo.uraian_pekerjaan.length > 60 ? wo.uraian_pekerjaan.substring(0, 60) + '...' : wo.uraian_pekerjaan %></td>
+                                <td><%= wo.team || '-' %></td>
                                 <td>📍 <%= wo.lokasi %></td>
                                 <td><%= wo.nama_pemohon || '-' %></td>
                                 <td>
@@ -447,6 +501,24 @@
 
 </div>
 
+<!-- Team Selection Modal -->
+<div id="teamModal" class="modal-overlay">
+    <div class="modal">
+        <h3>Pilih Team Tujuan WO</h3>
+        <select id="teamSelect" class="modal-select">
+            <option value="">-- Pilih Team --</option>
+            <option value="Team Sipil">Team Sipil</option>
+            <option value="Team Electric">Team Electric</option>
+            <option value="Team Operation">Team Operation</option>
+            <option value="Team Lainnya">Team Lainnya</option>
+        </select>
+        <div class="modal-buttons">
+            <button id="cancelBtn" class="btn btn-cancel">Batal</button>
+            <button id="confirmBtn" class="btn btn-primary">Buat WO</button>
+        </div>
+    </div>
+</div>
+
 <script>
     // Search and Filter functionality
     const searchInput = document.getElementById('searchInput');
@@ -460,9 +532,10 @@
         tableRows.forEach(row => {
             const noWo = row.cells[0].textContent.toLowerCase();
             const uraian = row.cells[1].textContent.toLowerCase();
+            const team = row.cells[2].textContent.toLowerCase();
             const status = row.getAttribute('data-status');
 
-            const matchesSearch = noWo.includes(searchTerm) || uraian.includes(searchTerm);
+            const matchesSearch = noWo.includes(searchTerm) || uraian.includes(searchTerm) || team.includes(searchTerm);
             const matchesStatus = selectedStatus === 'all' || status === selectedStatus;
 
             row.style.display = matchesSearch && matchesStatus ? '' : 'none';
@@ -471,6 +544,37 @@
 
     searchInput.addEventListener('input', filterTable);
     statusFilter.addEventListener('change', filterTable);
+
+    // Modal Logic
+    const openModalBtn = document.getElementById('openModalBtn');
+    const teamModal = document.getElementById('teamModal');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const confirmBtn = document.getElementById('confirmBtn');
+    const teamSelect = document.getElementById('teamSelect');
+
+    openModalBtn?.addEventListener('click', () => {
+        teamModal.style.display = 'flex';
+        teamSelect.value = '';
+    });
+
+    cancelBtn?.addEventListener('click', () => {
+        teamModal.style.display = 'none';
+    });
+
+    teamModal?.addEventListener('click', (e) => {
+        if (e.target === teamModal) {
+            teamModal.style.display = 'none';
+        }
+    });
+
+    confirmBtn?.addEventListener('click', () => {
+        const selectedTeam = teamSelect.value;
+        if (selectedTeam) {
+            window.location.href = '/create-wo?team=' + encodeURIComponent(selectedTeam);
+        } else {
+            alert('Silakan pilih team terlebih dahulu!');
+        }
+    });
 </script>
 
 </body>
