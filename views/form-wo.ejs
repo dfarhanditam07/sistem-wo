@@ -524,38 +524,49 @@ td,th{
          </table> 
 
          <div style="text-align: center; margin-top: 30px; margin-bottom: 30px;"> 
-             
-             <% if (!wo) { %> 
-                 <button type="submit" class="btn-action btn-success"> 
-                     Submit Pengajuan WO 
-                 </button> 
-             <% } else if (wo && wo.status === 'Draft' && (user.id === wo.prepared_by || user.role === 'Super Admin')) { %> 
-                 <button type="submit" name="action" value="resubmit" class="btn-action btn-primary"> 
-                     Ajukan Ulang WO 
-                 </button> 
-             <% } else if (wo.status === 'Submitted' && (user.role === 'Supervisor' || user.role === 'Team Leader' || user.role === 'Super Admin')) { %> 
-                 <% if (user.role === 'Super Admin' || (wo.team && user.team && wo.team === user.team)) { %> 
-                     <button type="submit" name="action" value="review" class="btn-action btn-primary"> 
-                         Review (Team Leader/Supv) 
-                     </button> 
-                     <button type="submit" name="action" value="reject" class="btn-action btn-danger"> 
-                         Tolak WO 
-                     </button> 
-                 <% } else { %> 
-                     <div style="color: #dc3545; font-weight: 600;">Anda hanya bisa review WO untuk team <%= user.team %></div> 
-                 <% } %> 
-             <% } else if (wo.status === 'Reviewed' && (user.role === 'Manager' || user.role === 'Super Admin')) { %> 
-                 <button type="submit" name="action" value="approve" class="btn-action btn-success"> 
-                     Approve (Shorebase Manager) 
-                 </button> 
-                 <button type="submit" name="action" value="reject" class="btn-action btn-danger"> 
-                     Tolak WO 
-                 </button> 
-             <% } %> 
+            <% if (!wo) { %> 
+                <button type="submit" class="btn-action btn-success"> 
+                    Submit Pengajuan WO 
+                </button> 
 
-             <br><br> 
-         </div> 
+            <% } else if (wo && wo.status === 'Draft' && (user.id === wo.prepared_by || user.role === 'Super Admin')) { %> 
+                <button type="submit" name="action" value="resubmit" class="btn-action btn-primary"> 
+                    Ajukan Ulang WO 
+                </button> 
 
+            <% } else if (wo.status === 'Submitted' && (user.role === 'Manager' || user.role === 'Super Admin')) { %> 
+                <!-- TAHAP 1: MANAGER APPROVE TERLEBIH DAHULU -->
+                <button type="submit" name="action" value="manager_approve" class="btn-action btn-success"> 
+                    Approve (Shorebase Manager) 
+                </button> 
+                <button type="submit" name="action" value="reject" class="btn-action btn-danger"> 
+                    Tolak WO 
+                </button> 
+
+            <% } else if (wo.status === 'Reviewed' && (user.role === 'Supervisor' || user.role === 'Team Leader' || user.role === 'Super Admin')) { %> 
+                <!-- TAHAP 2: SUPERVISOR / TEAM LEADER APPROVE SETELAH MANAGER -->
+                <% if (user.role === 'Super Admin' || (wo.team && user.team && wo.team === user.team)) { %> 
+                    <button type="submit" name="action" value="spv_approve" class="btn-action btn-primary"> 
+                        Approve & Review (Team Leader/Supv) 
+                    </button> 
+                    <button type="submit" name="action" value="reject" class="btn-action btn-danger"> 
+                        Tolak WO 
+                    </button> 
+                <% } else { %> 
+                    <div style="color: #dc3545; font-weight: 600;">
+                        Menunggu Approval dari Team Leader / SPV <%= wo.team %>
+                    </div> 
+                <% } %> 
+
+            <% } else if (wo.status === 'Submitted' && (user.role === 'Supervisor' || user.role === 'Team Leader')) { %>
+                <!-- PESAN JIKA SPV MEMBUKA WO YANG BELUM DI-APPROVE MANAGER -->
+                <div style="color: #17a2b8; font-weight: 600;">
+                    Menunggu Persetujuan Tahap 1 dari Shorebase Manager
+                </div>
+            <% } %> 
+
+            <br><br> 
+         </div>
          <div class="section-title">LEMBAR PERSETUJUAN/PENYELESAIAN PEKERJAAN</div> 
      
          <table class="form-table"> 
