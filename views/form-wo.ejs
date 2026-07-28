@@ -450,10 +450,10 @@ td,th{
  
          <table class="form-table"> 
              <tr> 
-                 <th width="14%">Nomor WO</th> 
-                 <th width="46%">Uraian Pekerjaan</th> 
-                 <th width="16%">Lokasi</th> 
-                 <th width="24%">Lampiran</th> 
+                 <th width="18%">Nomor WO</th> 
+                 <th width="44%">Uraian Pekerjaan</th> 
+                 <th width="18%">Lokasi</th> 
+                 <th width="20%">Lampiran</th> 
              </tr> 
              <tr> 
                  <td> 
@@ -461,6 +461,11 @@ td,th{
                  </td> 
                  <td> 
                      <textarea class="textarea-lines" name="uraian_pekerjaan" <%= wo && wo.status !== 'Draft' ? 'readonly' : '' %> required><%= wo ? wo.uraian_pekerjaan : '' %></textarea> 
+                     <% if (!wo) { %> 
+                         <input type="hidden" name="team" value="<%= selectedTeam %>"> 
+                     <% } else if (wo && wo.status === 'Draft') { %> 
+                         <input type="hidden" name="team" value="<%= wo.team %>"> 
+                     <% } %> 
                  </td> 
                  <td> 
                      <textarea class="textarea-lines" name="lokasi" <%= wo && wo.status !== 'Draft' ? 'readonly' : '' %> required><%= wo ? wo.lokasi : '' %></textarea> 
@@ -479,7 +484,7 @@ td,th{
                              </div> 
                              <input type="hidden" name="old_lampiran" value="<%= wo.lampiran %>"> 
                          <% } %> 
- 
+
                      <% } else { %> 
                          <div class="bold">File Lampiran:</div> 
                          <br> 
@@ -503,51 +508,66 @@ td,th{
                  <td> 
                      Prepared by,<br><br><br><br><br><br> 
                      (<input type="text" class="sign-input" value="<%= wo ? wo.nama_prepared : user.nama %>" readonly>)<br> 
-                     <div class="bold">Dept: <input type="text" value="<%= wo ? wo.dept_prepared : user.departemen %>" readonly style="width:120px;border:none;border-bottom:2px dotted #000;"></div> 
+                    <div class="bold">Team: <input type="text" value="<%= wo ? (wo.team_prepared || wo.team) : user.team %>" readonly style="width:120px;border:none;border-bottom:2px dotted #000;"></div> 
                  </td> 
                  <td> 
                      Reviewed by,<br><br><br><br><br><br> 
-                     (<input type="text" class="sign-input" value="<%= wo ? (wo.nama_approved ? wo.nama_approved : (wo.status === 'Reviewed' && user.role === 'Supervisor' ? user.nama : '')) : '' %>" readonly>)<br> 
+                    (<input type="text" class="sign-input" value="<%= wo && wo.nama_reviewed ? wo.nama_reviewed : '' %>" readonly>)<br> 
                      <div class="bold">Team Leader/Supv.</div> 
                  </td> 
                  <td> 
                      Approved by,<br><br><br><br><br><br> 
-                     (<input type="text" class="sign-input" value="<%= wo ? (wo.nama_reviewed ? wo.nama_reviewed : (wo.status === 'Submitted' && user.role === 'Manager' ? user.nama : '')) : '' %>" readonly>)<br> 
+                    (<input type="text" class="sign-input" value="<%= wo && wo.nama_approved ? wo.nama_approved : '' %>" readonly>)<br> 
                      <div class="bold">Shorebase Manager</div> 
                  </td> 
              </tr> 
          </table> 
- 
+
          <div style="text-align: center; margin-top: 30px; margin-bottom: 30px;"> 
-             
-             <% if (!wo) { %> 
-                 <button type="submit" class="btn-action btn-success"> 
+            <% if (!wo) { %> 
+                <button type="submit" class="btn-action btn-success"> 
                     Submit Pengajuan WO 
-                 </button> 
-             <% } else if (wo && wo.status === 'Draft' && (user.id === wo.prepared_by || user.role === 'Super Admin')) { %> 
-                 <button type="submit" name="action" value="resubmit" class="btn-action btn-primary"> 
+                </button> 
+
+            <% } else if (wo && wo.status === 'Draft' && (user.id === wo.prepared_by || user.role === 'Super Admin')) { %> 
+                <button type="submit" name="action" value="resubmit" class="btn-action btn-primary"> 
                     Ajukan Ulang WO 
-                 </button> 
-             <% } else if (wo.status === 'Submitted' && (user.role === 'Manager' || user.role === 'Super Admin')) { %> 
-                 <button type="submit" name="action" value="review" class="btn-action btn-primary"> 
-                    Review & Verifikasi 
-                 </button> 
-                 <button type="submit" name="action" value="reject" class="btn-action btn-danger"> 
-                    Tolak WO 
-                 </button> 
-             <% } else if (wo.status === 'Reviewed' && (user.role === 'Supervisor' || user.role === 'Super Admin')) { %> 
-                 <button type="submit" name="action" value="approve" class="btn-action btn-success"> 
-                    Approve Final 
-                 </button> 
-                 <button type="submit" name="action" value="reject" class="btn-action btn-danger"> 
-                    Tolak WO 
-                 </button> 
-             <% } %> 
+                </button> 
 
-             <br><br> 
-         </div> 
+            <% } else if (wo.status === 'Submitted' && (user.role === 'Manager' || user.role === 'Super Admin')) { %> 
+                <!-- TAHAP 1: MANAGER APPROVE TERLEBIH DAHULU -->
+                <button type="submit" name="action" value="manager_approve" class="btn-action btn-success"> 
+                    Approve (Shorebase Manager) 
+                </button> 
+                <button type="submit" name="action" value="reject" class="btn-action btn-danger"> 
+                    Tolak WO 
+                </button> 
 
-         <div class="section-title">LEMBAR PENYELESAIAN (Diisi oleh Pelaksana/Pemohon)</div> 
+            <% } else if (wo.status === 'Reviewed' && (user.role === 'Supervisor' || user.role === 'Team Leader' || user.role === 'Super Admin')) { %> 
+                <!-- TAHAP 2: SUPERVISOR / TEAM LEADER APPROVE SETELAH MANAGER -->
+                <% if (user.role === 'Super Admin' || (wo.team && user.team && wo.team === user.team)) { %> 
+                    <button type="submit" name="action" value="spv_approve" class="btn-action btn-primary"> 
+                        Approve & Review (Team Leader/Supv) 
+                    </button> 
+                    <button type="submit" name="action" value="reject" class="btn-action btn-danger"> 
+                        Tolak WO 
+                    </button> 
+                <% } else { %> 
+                    <div style="color: #dc3545; font-weight: 600;">
+                        Menunggu Approval dari Team Leader / SPV <%= wo.team %>
+                    </div> 
+                <% } %> 
+
+            <% } else if (wo.status === 'Submitted' && (user.role === 'Supervisor' || user.role === 'Team Leader')) { %>
+                <!-- PESAN JIKA SPV MEMBUKA WO YANG BELUM DI-APPROVE MANAGER -->
+                <div style="color: #17a2b8; font-weight: 600;">
+                    Menunggu Persetujuan Tahap 1 dari Shorebase Manager
+                </div>
+            <% } %> 
+
+            <br><br> 
+         </div>
+         <div class="section-title">LEMBAR PERSETUJUAN/PENYELESAIAN PEKERJAAN</div> 
      
          <table class="form-table"> 
              <tr> 
@@ -575,20 +595,20 @@ td,th{
          <table class="sign-table"> 
              <tr> 
                  <td> 
-                     Performed by,<br><br><br><br><br><br> 
-                     (<input type="text" class="sign-input" value="<%= wo && (wo.status === 'Completed' || wo.status === 'Closed') ? wo.nama_prepared : '' %>" readonly>)<br> 
-                     <div class="bold">Pelaksana / Pemohon</div> 
-                 </td> 
+                    Performed by,<br><br><br><br><br><br> 
+                    (<input type="text" class="sign-input" value="<%= wo && (wo.status === 'Completed' || wo.status === 'Closed') ? wo.nama_performed : '' %>" readonly>)<br> 
+                    <div class="bold">Dept: <input type="text" value="<%= wo && (wo.status === 'Completed' || wo.status === 'Closed') ? (wo.team_performed || wo.team) : '' %>" readonly style="width:120px;border:none;border-bottom:2px dotted #000;"></div> 
+                </td>
                  <td> 
                      Verified by,<br><br><br><br><br><br> 
-                     (<input type="text" class="sign-input" value="<%= wo && (wo.status === 'Closed' || wo.verified_by) ? wo.nama_reviewed : '' %>" readonly>)<br> 
+                     (<input type="text" class="sign-input" value="<%= wo && (wo.status === 'Closed' || wo.verified_by) ? wo.nama_verified : '' %>" readonly>)<br> 
                      <div class="bold">Team Leader/Supv.</div> 
                  </td> 
                  <td> 
-                     Received by,<br><br><br><br><br><br> 
-                     (<input type="text" class="sign-input" value="<%= wo && wo.status === 'Closed' ? wo.nama_prepared : '' %>" readonly>)<br> 
-                     <div class="bold">Pemohon</div> 
-                 </td> 
+                    Received by,<br><br><br><br><br><br> 
+                    (<input type="text" class="sign-input" value="<%= wo && wo.status === 'Closed' ? wo.nama_received : '' %>" readonly>)<br> 
+                    <div class="bold">Dept: <input type="text" value="<%= wo && wo.status === 'Closed' ? (wo.team_received || wo.team) : '' %>" readonly style="width:120px;border:none;border-bottom:2px dotted #000;"></div> 
+                </td>
              </tr> 
          </table>
 
@@ -599,7 +619,7 @@ td,th{
                  </button> 
             </div>
 
-         <% } else if (wo && wo.status === 'Completed' && !wo.verified_by && (user.role === 'Supervisor' || user.role === 'Super Admin')) { %> 
+         <% } else if (wo && wo.status === 'Completed' && !wo.verified_by && (user.role === 'Supervisor' || user.role === 'Team Leader' || user.role === 'Super Admin')) { %> 
             <div style="text-align: center; margin-top: 30px;">
                  <button type="submit" name="action" value="verify" class="btn-action btn-info"> 
                     Verifikasi Hasil Pekerjaan 
