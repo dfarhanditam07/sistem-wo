@@ -1,642 +1,702 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Form - Work Order</title>
-<link rel="icon" type="image/png" href="/images/favicon.png">
-<script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <title>Form - Work Order</title>
+  <link rel="icon" type="image/png" href="/images/favicon.png">
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
 
-<style>
-* {
-    box-sizing: border-box;
-}
+  <style>
+    * {
+      box-sizing: border-box;
+    }
 
-body {
-    background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
-    margin: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    padding-bottom: 50px;
-}
+    body {
+      background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding-bottom: 50px;
+    }
 
-.navbar {
-    background: linear-gradient(135deg, #0f4c81 0%, #1a6bb5 100%);
-    color: white;
-    padding: 18px 40px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 4px 20px rgba(15, 76, 129, 0.3);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-}
-
-.navbar-brand {
-    font-size: 24px;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    letter-spacing: 0.5px;
-}
-
-.navbar-user {
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-}
-
-.navbar-user span {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.user-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 16px;
-}
-
-.btn-back {
-    background: rgba(255, 255, 255, 0.15);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    padding: 10px 20px;
-    border-radius: 10px;
-    text-decoration: none;
-    font-weight: bold;
-    font-size: 14px;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.btn-back:hover {
-    background: white;
-    color: #0f4c81;
-    transform: translateY(-2px);
-}
-
-.paper{
-    width: 820px;
-    max-width: 100%;
-    min-height: 1120px;
-    background: #fff;
-    margin: auto;
-    padding: 40px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-    border-radius: 12px;
-}
-
-table{
-    width: 100%;
-    border-collapse: collapse;
-}
-
-td,th{
-    border: 1px solid #444;
-    padding: 4px;
-    vertical-align: top;
-}
-
-.center{
-    text-align: center;
-}
-
-.bold{
-    font-weight: bold;
-}
-
-.header-title{
-    font-size: 18px;
-    font-weight: bold;
-}
-
-.header-sub{
-    font-size: 16px;
-    font-weight: bold;
-}
-
-.logo-box{
-    width: 170px;
-    text-align: center;
-    vertical-align: center;
-}
-
-.logo{
-    width: 120px;
-}
-
-.section-title{
-    text-align: center;
-    font-weight: bold;
-    font-size: 18px;
-    margin: 25px 0 15px;
-    text-decoration: underline;
-}
-
-.form-table th{
-    background: #d9e2f3;
-    text-align: center;
-}
-
-.form-table td{
-    height: 150px;
-}
-
-.input-line{
-    width: 100%;
-    border: none;
-    border-bottom: 2px dotted #000;
-    outline: none;
-    font-size: 14px;
-    margin-bottom: 15px;
-    background: transparent;
-    transition: border-color 0.3s ease;
-}
-
-.input-line:focus {
-    border-bottom: 2px solid #0f4c81;
-}
-
-.textarea-lines{
-    width: 100%;
-    height: 120px;
-    border: none;
-    outline: none;
-    resize: none;
-    background:
-        repeating-linear-gradient(
-            to bottom,
-            transparent,
-            transparent 20px,
-            #000 21px
-        );
-    line-height: 21px;
-    font-size: 14px;
-    transition: background 0.3s ease;
-}
-
-.checkbox-group{
-    margin-top: 15px;
-    line-height: 1.6;
-    font-size: 14px;
-}
-
-.checkbox-group input{
-    width: 16px;
-    height: 16px;
-}
-
-.sign-table{
-    margin-top: 20px;
-}
-
-.sign-table td{
-    border: none;
-    text-align: center;
-    height: 120px;
-}
-
-.sign-input{
-    border: none;
-    border-bottom: 2px dotted #000;
-    width: 150px;
-    text-align: center;
-    font-size: 14px;
-    outline: none;
-}
-
-.bottom-title{
-    margin-top: 25px;
-    border-top: 3px solid #000;
-    padding-top: 20px;
-}
-
-.approval-table th{
-    background: #d9e2f3;
-    text-align: center;
-}
-
-.approval-table td{
-    height: 220px;
-}
-
-.cost-box{
-    margin-top: 10px;
-}
-
-.cost-input{
-    width: 140px;
-    border: none;
-    border-bottom: 2px dotted #000;
-    outline: none;
-    margin-left: 5px;
-}
-
-.small{
-    font-size: 13px;
-    text-align: center;
-}
-
-/* Styling Breadcrumbs */ 
-.breadcrumbs { 
-    display: flex; 
-    align-items: center; 
-    font-size: 14px; 
-    margin-bottom: 25px; 
-    color: #666; 
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-} 
-
-.breadcrumbs a { 
-    color: #0f4c81;
-    text-decoration: none; 
-    transition: text-decoration 0.2s ease-in-out; 
-} 
-
-.breadcrumbs a:hover { 
-    text-decoration: underline; 
-} 
-
-.breadcrumbs .separator { 
-    margin: 0 10px; 
-    color: #aaa; 
-    font-size: 12px; 
-} 
-
-.breadcrumbs .current { 
-    color: #333; 
-    font-weight: 600; 
-}
-
-/* Button styling */
-.btn-action {
-    padding: 12px 30px;
-    font-size: 15px;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    margin: 5px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.btn-action:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-}
-
-.btn-success {
-    background: linear-gradient(135deg, #28a745 0%, #218838 100%);
-    color: white;
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-    color: white;
-}
-
-.btn-danger {
-    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-    color: white;
-}
-
-.btn-warning {
-    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
-    color: white;
-}
-
-.btn-info {
-    background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%);
-    color: white;
-}
-
-/* Responsive */
-@media (max-width: 860px) {
     .navbar {
+      background: linear-gradient(135deg, #0f4c81 0%, #1a6bb5 100%);
+      color: white;
+      padding: 18px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(15, 76, 129, 0.3);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .navbar-brand {
+      font-size: 24px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    .navbar-user {
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .navbar-user span {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .btn-back {
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      padding: 10px 20px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-back:hover {
+      background: white;
+      color: #0f4c81;
+      transform: translateY(-2px);
+    }
+
+    .paper {
+      width: 820px;
+      max-width: 100%;
+      min-height: 1120px;
+      background: #fff;
+      margin: auto;
+      padding: 40px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    td,
+    th {
+      border: 1px solid #444;
+      padding: 4px;
+      vertical-align: top;
+    }
+
+    .center {
+      text-align: center;
+    }
+
+    .bold {
+      font-weight: bold;
+    }
+
+    .header-title {
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .header-sub {
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .logo-box {
+      width: 170px;
+      text-align: center;
+      vertical-align: center;
+    }
+
+    .logo {
+      width: 120px;
+    }
+
+    .section-title {
+      text-align: center;
+      font-weight: bold;
+      font-size: 18px;
+      margin: 25px 0 15px;
+      text-decoration: underline;
+    }
+
+    .form-table th {
+      background: #d9e2f3;
+      text-align: center;
+    }
+
+    .form-table td {
+      height: 150px;
+    }
+
+    .input-line {
+      width: 100%;
+      border: none;
+      border-bottom: 2px dotted #000;
+      outline: none;
+      font-size: 14px;
+      margin-bottom: 15px;
+      background: transparent;
+      transition: border-color 0.3s ease;
+    }
+
+    .input-line:focus {
+      border-bottom: 2px solid #0f4c81;
+    }
+
+    .textarea-lines {
+      width: 100%;
+      height: 120px;
+      border: none;
+      outline: none;
+      resize: none;
+      background:
+        repeating-linear-gradient(to bottom,
+          transparent,
+          transparent 20px,
+          #000 21px);
+      line-height: 21px;
+      font-size: 14px;
+      transition: background 0.3s ease;
+    }
+
+    .checkbox-group {
+      margin-top: 15px;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .checkbox-group input {
+      width: 16px;
+      height: 16px;
+    }
+
+    .sign-table {
+      margin-top: 20px;
+    }
+
+    .sign-table td {
+      border: none;
+      text-align: center;
+      height: 120px;
+    }
+
+    .sign-input {
+      border: none;
+      border-bottom: 2px dotted #000;
+      width: 150px;
+      text-align: center;
+      font-size: 14px;
+      outline: none;
+    }
+
+    /* Container Box Tempat TTD */
+    .sign-box {
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 5px;
+    }
+
+    .sign-img {
+      max-height: 75px;
+      max-width: 130px;
+      object-fit: contain;
+    }
+
+    .bottom-title {
+      margin-top: 25px;
+      border-top: 3px solid #000;
+      padding-top: 20px;
+    }
+
+    .approval-table th {
+      background: #d9e2f3;
+      text-align: center;
+    }
+
+    .approval-table td {
+      height: 220px;
+    }
+
+    .cost-box {
+      margin-top: 10px;
+    }
+
+    .cost-input {
+      width: 140px;
+      border: none;
+      border-bottom: 2px dotted #000;
+      outline: none;
+      margin-left: 5px;
+    }
+
+    .small {
+      font-size: 13px;
+      text-align: center;
+    }
+
+    /* Styling Breadcrumbs */
+    .breadcrumbs {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      margin-bottom: 25px;
+      color: #666;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .breadcrumbs a {
+      color: #0f4c81;
+      text-decoration: none;
+      transition: text-decoration 0.2s ease-in-out;
+    }
+
+    .breadcrumbs a:hover {
+      text-decoration: underline;
+    }
+
+    .breadcrumbs .separator {
+      margin: 0 10px;
+      color: #aaa;
+      font-size: 12px;
+    }
+
+    .breadcrumbs .current {
+      color: #333;
+      font-weight: 600;
+    }
+
+    /* Button styling */
+    .btn-action {
+      padding: 12px 30px;
+      font-size: 15px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 5px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-action:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+      color: white;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+      color: white;
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+      color: white;
+    }
+
+    .btn-warning {
+      background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+      color: white;
+    }
+
+    .btn-info {
+      background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%);
+      color: white;
+    }
+
+    /* Responsive */
+    @media (max-width: 860px) {
+      .navbar {
         padding: 12px 20px;
         flex-wrap: wrap;
         gap: 10px;
-    }
-    
-    .navbar-brand {
+      }
+
+      .navbar-brand {
         font-size: 18px;
-    }
-    
-    .paper {
+      }
+
+      .paper {
         width: 95%;
         padding: 20px;
         margin: 10px auto;
-    }
-    
-    .sign-table td {
-        padding: 5px;
-    }
-    
-    .sign-input {
-        width: 100px;
-    }
-}
+      }
 
-@media (max-width: 500px) {
-    .sign-table {
-        display: block;
+      .sign-table td {
+        padding: 5px;
+      }
+
+      .sign-input {
+        width: 100px;
+      }
     }
-    
-    .sign-table tr {
+
+    @media (max-width: 500px) {
+      .sign-table {
+        display: block;
+      }
+
+      .sign-table tr {
         display: flex;
         flex-direction: column;
-    }
-    
-    .sign-table td {
+      }
+
+      .sign-table td {
         height: auto;
         padding: 20px 0;
+      }
     }
-}
-</style>
+  </style>
 </head>
+
 <body>
 
-    <nav class="navbar">
-        <div class="navbar-brand">
-            <img src="/images/favicon.png" alt="Logo" width="30" height="30" />
-            WORK - ORDER
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <img src="/images/favicon.png" alt="Logo" width="30" height="30" />
+      WORK - ORDER
+    </div>
+    <div class="navbar-user">
+      <span>
+        <div class="user-avatar"><%= user.nama.charAt(0).toUpperCase() %></div>
+        <div>
+          Formulir aktif oleh: <strong><%= user.nama %></strong><br>
+          <small style="opacity: 0.8; font-size: 12px;"><%= user.role %></small>
         </div>
-        <div class="navbar-user">
-            <span>
-                <div class="user-avatar"><%= user.nama.charAt(0).toUpperCase() %></div>
-                <div>
-                    Formulir aktif oleh: <strong><%= user.nama %></strong><br>
-                    <small style="opacity: 0.8; font-size: 12px;"><%= user.role %></small>
-                </div>
-            </span>
-            <a href="/" class="btn-back">Kembali ke Dashboard</a>
-        </div>
-    </nav>
+      </span>
+      <a href="/" class="btn-back">Kembali ke Dashboard</a>
+    </div>
+  </nav>
 
-    <div style="max-width: 820px; margin: 20px auto 10px auto;"> 
-    <div class="breadcrumbs"> 
-        <a href="/">Dashboard</a> 
-        <span class="separator">/</span> 
-        
-        <% if (!wo) { %> 
-            <span class="current">Buat WO Baru</span> 
-        <% } else { %> 
-            <a href="/">Daftar Work Order</a> 
-            <span class="separator">/</span> 
-            <span class="current">Detail (<%= wo.no_wo %>)</span> 
-        <% } %> 
-    </div> 
-</div>
+  <div style="max-width: 820px; margin: 20px auto 10px auto;">
+    <div class="breadcrumbs">
+      <a href="/">Dashboard</a>
+      <span class="separator">/</span>
 
-<div class="paper">
+      <% if (!wo) { %>
+      <span class="current">Buat WO Baru</span>
+      <% } else { %>
+      <a href="/">Daftar Work Order</a>
+      <span class="separator">/</span>
+      <span class="current">Detail (<%= wo.no_wo %>)</span>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="paper">
 
     <table style="width: 100%; border-collapse: collapse; border: 2px solid #000;">
-        <tr>
-            <td rowspan="2" class="logo-box" style="vertical-align: middle; text-align: center; width: 22%; padding: 15px; border: 1px solid #000;">
-                <img src="/images/logo-enc.png" alt="Logo Kiri" style="max-width: 90px; height: auto; object-fit: contain;">
-            </td>
+      <tr>
+        <td rowspan="2" class="logo-box" style="vertical-align: middle; text-align: center; width: 22%; padding: 15px; border: 1px solid #000;">
+          <img src="/images/logo-enc.png" alt="Logo Kiri" style="max-width: 90px; height: auto; object-fit: contain;">
+        </td>
 
-            <td class="center bold" style="height: 40px; vertical-align: bottom; border: 1px solid #000; border-bottom: none; padding-top: 15px;" colspan="2">
-                <div class="header-title" style="font-size: 22px; letter-spacing: 3px;">FORMULIR</div>
-            </td>
+        <td class="center bold" style="height: 40px; vertical-align: bottom; border: 1px solid #000; border-bottom: none; padding-top: 15px;" colspan="2">
+          <div class="header-title" style="font-size: 22px; letter-spacing: 3px;">FORMULIR</div>
+        </td>
 
-            <td rowspan="2" class="logo-box" style="vertical-align: middle; text-align: center; width: 22%; padding: 10px; border: 1px solid #000;">
-                <img src="/images/logo-ekanuri.png" alt="Logo Eka Nuri" style="max-width: 75px; height: auto; object-fit: contain; margin-bottom: 8px;">
-                <div class="bold" style="font-size: 13px; color: #000;">
-                    PT. EKA NURI
-                </div>
-            </td>
-        </tr>
+        <td rowspan="2" class="logo-box" style="vertical-align: middle; text-align: center; width: 22%; padding: 10px; border: 1px solid #000;">
+          <img src="/images/logo-ekanuri.png" alt="Logo Eka Nuri" style="max-width: 75px; height: auto; object-fit: contain; margin-bottom: 8px;">
+          <div class="bold" style="font-size: 13px; color: #000;">
+            PT. EKA NURI
+          </div>
+        </td>
+      </tr>
 
-        <tr>
-            <td class="center" colspan="2" style="vertical-align: top; padding-bottom: 15px; border: 1px solid #000; border-top: none;">
-                <div class="header-title" style="font-size: 18px; font-weight: bold; color: #000; margin-top: 5px;">
-                    INTERNAL WORK ORDER
-                </div>
-                <div class="header-sub" style="font-size: 13px; color: #444; margin-top: 3px;">
-                    (PERINTAH KERJA INTERNAL)
-                </div>
-            </td>
-        </tr>
+      <tr>
+        <td class="center" colspan="2" style="vertical-align: top; padding-bottom: 15px; border: 1px solid #000; border-top: none;">
+          <div class="header-title" style="font-size: 18px; font-weight: bold; color: #000; margin-top: 5px;">
+            INTERNAL WORK ORDER
+          </div>
+          <div class="header-sub" style="font-size: 13px; color: #444; margin-top: 3px;">
+            (PERINTAH KERJA INTERNAL)
+          </div>
+        </td>
+      </tr>
 
-        <tr style="font-size: 12px; font-weight: bold; text-align: center; background-color: #f9f9f9;">
-            <td style="padding: 8px; border: 1px solid #000; width: 25%;">No Dokumen : FM PS OM 25</td>
-            <td style="padding: 8px; border: 1px solid #000; width: 28%;">Tanggal Efektif : 23 Februari 2026</td>
-            <td style="padding: 8px; border: 1px solid #000; width: 28%;">Revisi : 01/26</td>
-            <td style="padding: 8px; border: 1px solid #000; width: 22%;">Hal : 1 dari 1</td>
-        </tr>
+      <tr style="font-size: 12px; font-weight: bold; text-align: center; background-color: #f9f9f9;">
+        <td style="padding: 8px; border: 1px solid #000; width: 25%;">No Dokumen : FM PS OM 25</td>
+        <td style="padding: 8px; border: 1px solid #000; width: 28%;">Tanggal Efektif : 23 Februari 2026</td>
+        <td style="padding: 8px; border: 1px solid #000; width: 28%;">Revisi : 01/26</td>
+        <td style="padding: 8px; border: 1px solid #000; width: 22%;">Hal : 1 dari 1</td>
+      </tr>
     </table>
 
-    <div class="section-title">LEMBAR PENGAJUAN</div> 
- 
-     <form action="<%= wo ? '/action-wo/' + wo.id : '/submit-wo' %>" method="POST" enctype="multipart/form-data"> 
- 
-         <table class="form-table"> 
-             <tr> 
-                 <th width="18%">Nomor WO</th> 
-                 <th width="44%">Uraian Pekerjaan</th> 
-                 <th width="18%">Lokasi</th> 
-                 <th width="20%">Lampiran</th> 
-             </tr> 
-             <tr> 
-                 <td> 
-                     <input type="text" class="input-line" name="no_wo" value="<%= wo ? wo.no_wo : '' %>" <%= wo ? 'readonly' : '' %> required> 
-                 </td> 
-                 <td> 
-                     <textarea class="textarea-lines" name="uraian_pekerjaan" <%= wo && wo.status !== 'Draft' ? 'readonly' : '' %> required><%= wo ? wo.uraian_pekerjaan : '' %></textarea> 
-                     <% if (!wo) { %> 
-                         <input type="hidden" name="team" value="<%= selectedTeam %>"> 
-                     <% } else if (wo && wo.status === 'Draft') { %> 
-                         <input type="hidden" name="team" value="<%= wo.team %>"> 
-                     <% } %> 
-                 </td> 
-                 <td> 
-                     <textarea class="textarea-lines" name="lokasi" <%= wo && wo.status !== 'Draft' ? 'readonly' : '' %> required><%= wo ? wo.lokasi : '' %></textarea> 
-                 </td> 
-                 <td> 
-                     <% if (!wo || (wo && wo.status === 'Draft')) { %> 
-                         <div class="bold">Upload Bukti / RAB:</div> 
-                         <input type="file" name="lampiran_file" accept=".jpg,.png,.pdf" multiple style="margin-top: 10px;"> 
-                         <br> 
-                         <small style="color: #666; font-size: 11px;">* Maks 5 file sekaligus (Abaikan jika tidak ingin mengganti file lama)</small> 
-                         
-                         <% if (wo && wo.lampiran) { %> 
-                             <div style="margin-top: 10px; font-size: 12px; background: #e9ecef; padding: 5px; border-radius: 4px;"> 
-                                 <span style="color: #0c5460; font-weight: bold;">✔ Dokumen lama tersimpan.</span><br> 
-                                 <span style="color: #555;">(Upload file baru di atas HANYA JIKA ingin mengganti file yang lama)</span> 
-                             </div> 
-                             <input type="hidden" name="old_lampiran" value="<%= wo.lampiran %>"> 
-                         <% } %> 
+    <div class="section-title">LEMBAR PENGAJUAN</div>
 
-                     <% } else { %> 
-                         <div class="bold">File Lampiran:</div> 
-                         <br> 
-                         <% if (wo.lampiran) { %> 
-                             <% const fileArray = wo.lampiran.split(','); %> 
-                             <% fileArray.forEach((file, index) => { %> 
-                                 <a href="<%= file %>" target="_blank" style="display: inline-block; padding: 5px 10px; margin-bottom: 5px; background-color: #0f4c81; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;"> 
-                                     📄 Buka Dokumen <%= index + 1 %> 
-                                 </a><br> 
-                             <% }) %> 
-                         <% } else { %> 
-                             <span style="color: red; font-size: 12px;">Tidak ada file terlampir</span> 
-                         <% } %> 
-                     <% } %> 
-                 </td> 
-             </tr> 
-         </table> 
- 
-         <table class="sign-table"> 
-             <tr> 
-                 <td> 
-                     Prepared by,<br><br><br><br><br><br> 
-                     (<input type="text" class="sign-input" value="<%= wo ? wo.nama_prepared : user.nama %>" readonly>)<br> 
-                    <div class="bold">Team: <input type="text" value="<%= wo ? (wo.team_prepared || wo.team) : user.team %>" readonly style="width:120px;border:none;border-bottom:2px dotted #000;"></div> 
-                 </td> 
-                 <td> 
-                     Reviewed by,<br><br><br><br><br><br> 
-                    (<input type="text" class="sign-input" value="<%= wo && wo.nama_reviewed ? wo.nama_reviewed : '' %>" readonly>)<br> 
-                     <div class="bold">Team Leader/Supv.</div> 
-                 </td> 
-                 <td> 
-                     Approved by,<br><br><br><br><br><br> 
-                    (<input type="text" class="sign-input" value="<%= wo && wo.nama_approved ? wo.nama_approved : '' %>" readonly>)<br> 
-                     <div class="bold">Shorebase Manager</div> 
-                 </td> 
-             </tr> 
-         </table> 
+    <form action="<%= wo ? '/action-wo/' + wo.id : '/submit-wo' %>" method="POST" enctype="multipart/form-data">
 
-         <div style="text-align: center; margin-top: 30px; margin-bottom: 30px;"> 
-            <% if (!wo) { %> 
-                <button type="submit" class="btn-action btn-success"> 
-                    Submit Pengajuan WO 
-                </button> 
+      <table class="form-table">
+        <tr>
+          <th width="18%">Nomor WO</th>
+          <th width="44%">Uraian Pekerjaan</th>
+          <th width="18%">Lokasi</th>
+          <th width="20%">Lampiran</th>
+        </tr>
+        <tr>
+          <td>
+            <input type="text" class="input-line" name="no_wo" value="<%= wo ? wo.no_wo : '' %>" <%= wo ? 'readonly' : '' %> required>
+          </td>
+          <td>
+            <textarea class="textarea-lines" name="uraian_pekerjaan" <%= wo && wo.status !== 'Draft' ? 'readonly' : '' %> required><%= wo ? wo.uraian_pekerjaan : '' %></textarea>
+            <% if (!wo) { %>
+            <input type="hidden" name="team" value="<%= selectedTeam %>">
+            <% } else if (wo && wo.status === 'Draft') { %>
+            <input type="hidden" name="team" value="<%= wo.team %>">
+            <% } %>
+          </td>
+          <td>
+            <textarea class="textarea-lines" name="lokasi" <%= wo && wo.status !== 'Draft' ? 'readonly' : '' %> required><%= wo ? wo.lokasi : '' %></textarea>
+          </td>
+          <td>
+            <% if (!wo || (wo && wo.status === 'Draft')) { %>
+            <div class="bold">Upload Bukti / RAB:</div>
+            <input type="file" name="lampiran_file" accept=".jpg,.png,.pdf" multiple style="margin-top: 10px;">
+            <br>
+            <small style="color: #666; font-size: 11px;">* Maks 5 file sekaligus (Abaikan jika tidak ingin mengganti file lama)</small>
 
-            <% } else if (wo && wo.status === 'Draft' && (user.id === wo.prepared_by || user.role === 'Super Admin')) { %> 
-                <button type="submit" name="action" value="resubmit" class="btn-action btn-primary"> 
-                    Ajukan Ulang WO 
-                </button> 
-
-            <% } else if (wo.status === 'Submitted' && (user.role === 'Manager' || user.role === 'Super Admin')) { %> 
-                <!-- TAHAP 1: MANAGER APPROVE TERLEBIH DAHULU -->
-                <button type="submit" name="action" value="manager_approve" class="btn-action btn-success"> 
-                    Approve (Shorebase Manager) 
-                </button> 
-                <button type="submit" name="action" value="reject" class="btn-action btn-danger"> 
-                    Tolak WO 
-                </button> 
-
-            <% } else if (wo.status === 'Reviewed' && (user.role === 'Supervisor' || user.role === 'Team Leader' || user.role === 'Super Admin')) { %> 
-                <!-- TAHAP 2: SUPERVISOR / TEAM LEADER APPROVE SETELAH MANAGER -->
-                <% if (user.role === 'Super Admin' || (wo.team && user.team && wo.team === user.team)) { %> 
-                    <button type="submit" name="action" value="spv_approve" class="btn-action btn-primary"> 
-                        Approve & Review (Team Leader/Supv) 
-                    </button> 
-                    <button type="submit" name="action" value="reject" class="btn-action btn-danger"> 
-                        Tolak WO 
-                    </button> 
-                <% } else { %> 
-                    <div style="color: #dc3545; font-weight: 600;">
-                        Menunggu Approval dari Team Leader / SPV <%= wo.team %>
-                    </div> 
-                <% } %> 
-
-            <% } else if (wo.status === 'Submitted' && (user.role === 'Supervisor' || user.role === 'Team Leader')) { %>
-                <!-- PESAN JIKA SPV MEMBUKA WO YANG BELUM DI-APPROVE MANAGER -->
-                <div style="color: #17a2b8; font-weight: 600;">
-                    Menunggu Persetujuan Tahap 1 dari Shorebase Manager
-                </div>
-            <% } %> 
-
-            <br><br> 
-         </div>
-         <div class="section-title">LEMBAR PERSETUJUAN/PENYELESAIAN PEKERJAAN</div> 
-     
-         <table class="form-table"> 
-             <tr> 
-                 <td width="40%"> 
-                     <div class="bold">Detail Pekerjaan yang Dilakukan:</div> 
-                     <textarea class="textarea-lines" name="detail_pekerjaan" <%= wo && wo.status === 'Approved' && (user.id === wo.prepared_by || user.role === 'Super Admin') ? '' : 'readonly' %>><%= wo ? (wo.detail_pekerjaan || (wo.status === 'Approved' ? wo.uraian_pekerjaan : '')) : '' %></textarea> 
-                 </td> 
-                 <td width="30%"> 
-                     <div class="bold">Completion Status:</div> 
-                     <textarea class="textarea-lines" name="completion_status" <%= wo && wo.status === 'Approved' && (user.id === wo.prepared_by || user.role === 'Super Admin') ? '' : 'readonly' %>><%= wo ? wo.completion_status : '' %></textarea> 
-                 </td> 
-                 <td width="30%"> 
-                     <div class="bold">Biaya Aktual (Jika Ada):</div> 
-                     <div style="margin-top:10px;"> 
-                         <div>Manpower: Rp <input type="number" name="biaya_manpower" class="cost-input" style="width: 100px;" value="<%= wo ? wo.biaya_manpower : '0' %>" <%= wo && wo.status === 'Approved' && (user.id === wo.prepared_by || user.role === 'Super Admin') ? '' : 'readonly' %>></div> 
-                         <br> 
-                         <div>Material: Rp <input type="number" name="biaya_material" class="cost-input" style="width: 100px;" value="<%= wo ? wo.biaya_material : '0' %>" <%= wo && wo.status === 'Approved' && (user.id === wo.prepared_by || user.role === 'Super Admin') ? '' : 'readonly' %>></div> 
-                         <br> 
-                         <div>Lain-lain: Rp <input type="number" name="biaya_lain" class="cost-input" style="width: 100px;" value="<%= wo ? wo.biaya_lain : '0' %>" <%= wo && wo.status === 'Approved' && (user.id === wo.prepared_by || user.role === 'Super Admin') ? '' : 'readonly' %>></div> 
-                     </div> 
-                 </td> 
-             </tr> 
-         </table> 
-     
-         <table class="sign-table"> 
-             <tr> 
-                 <td> 
-                    Performed by,<br><br><br><br><br><br> 
-                    (<input type="text" class="sign-input" value="<%= wo && (wo.status === 'Completed' || wo.status === 'Closed') ? wo.nama_performed : '' %>" readonly>)<br> 
-                    <div class="bold">Dept: <input type="text" value="<%= wo && (wo.status === 'Completed' || wo.status === 'Closed') ? (wo.team_performed || wo.team) : '' %>" readonly style="width:120px;border:none;border-bottom:2px dotted #000;"></div> 
-                </td>
-                 <td> 
-                     Verified by,<br><br><br><br><br><br> 
-                     (<input type="text" class="sign-input" value="<%= wo && (wo.status === 'Closed' || wo.verified_by) ? wo.nama_verified : '' %>" readonly>)<br> 
-                     <div class="bold">Team Leader/Supv.</div> 
-                 </td> 
-                 <td> 
-                    Received by,<br><br><br><br><br><br> 
-                    (<input type="text" class="sign-input" value="<%= wo && wo.status === 'Closed' ? wo.nama_received : '' %>" readonly>)<br> 
-                    <div class="bold">Dept: <input type="text" value="<%= wo && wo.status === 'Closed' ? (wo.team_received || wo.team) : '' %>" readonly style="width:120px;border:none;border-bottom:2px dotted #000;"></div> 
-                </td>
-             </tr> 
-         </table>
-
-         <% if (wo && wo.status === 'Approved' && (user.id === wo.prepared_by || user.role === 'Super Admin')) { %> 
-            <div style="text-align: center; margin-top: 30px;">
-                 <button type="submit" name="action" value="complete" class="btn-action btn-warning"> 
-                    Simpan & Selesaikan Pekerjaan 
-                 </button> 
+            <% if (wo && wo.lampiran) { %>
+            <div style="margin-top: 10px; font-size: 12px; background: #e9ecef; padding: 5px; border-radius: 4px;">
+              <span style="color: #0c5460; font-weight: bold;">✔ Dokumen lama tersimpan.</span><br>
+              <span style="color: #555;">(Upload file baru di atas HANYA JIKA ingin mengganti file yang lama)</span>
             </div>
+            <input type="hidden" name="old_lampiran" value="<%= wo.lampiran %>">
+            <% } %>
 
-         <% } else if (wo && wo.status === 'Completed' && !wo.verified_by && (user.role === 'Supervisor' || user.role === 'Team Leader' || user.role === 'Super Admin')) { %> 
-            <div style="text-align: center; margin-top: 30px;">
-                 <button type="submit" name="action" value="verify" class="btn-action btn-info"> 
-                    Verifikasi Hasil Pekerjaan 
-                 </button> 
+            <% } else { %>
+            <div class="bold">File Lampiran:</div>
+            <br>
+            <% if (wo.lampiran) { %>
+            <% const fileArray = wo.lampiran.split(','); %>
+            <% fileArray.forEach((file, index) => { %>
+            <a href="<%= file %>" target="_blank" style="display: inline-block; padding: 5px 10px; margin-bottom: 5px; background-color: #0f4c81; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;">
+              📄 Buka Dokumen <%= index + 1 %>
+            </a><br>
+            <% }) %>
+            <% } else { %>
+            <span style="color: red; font-size: 12px;">Tidak ada file terlampir</span>
+            <% } %>
+            <% } %>
+          </td>
+        </tr>
+      </table>
+
+      <table class="sign-table">
+        <tr>
+          <!-- 1. PREPARED BY -->
+          <td>
+            Prepared by,<br>
+            <div class="sign-box">
+              <% 
+                        let preparedSign = wo ? wo.ttd_prepared : user.ttd; 
+                        if (preparedSign) { 
+                        %>
+              <img src="<%= preparedSign %>" alt="TTD Prepared" class="sign-img">
+              <% } %>
             </div>
+            (<input type="text" class="sign-input" value="<%= wo ? wo.nama_prepared : user.nama %>" readonly>)<br>
+            <div class="bold">Team: <input type="text" value="<%= wo ? (wo.team_prepared || wo.team) : user.team %>" readonly style="width:120px;border:none;border-bottom:2px dotted #000;"></div>
+          </td>
 
-         <% } else if (wo && wo.status === 'Completed' && wo.verified_by && (user.id === wo.prepared_by || user.role === 'Super Admin')) { %> 
-            <div style="text-align: center; margin-top: 30px;">
-                 <button type="submit" name="action" value="close" class="btn-action btn-success"> 
-                    Terima Hasil & Close WO 
-                 </button> 
+          <!-- 2. REVIEWED BY (Team Leader / SPV) -->
+          <td>
+            Reviewed by,<br>
+            <div class="sign-box">
+              <% if (wo && wo.nama_reviewed && wo.ttd_reviewed) { %>
+              <img src="<%= wo.ttd_reviewed %>" alt="TTD Reviewed" class="sign-img">
+              <% } %>
             </div>
-         <% } %>
+            (<input type="text" class="sign-input" value="<%= wo && wo.nama_reviewed ? wo.nama_reviewed : '' %>" readonly>)<br>
+            <div class="bold">Team Leader/Supv.</div>
+          </td>
 
-     </form> 
+          <!-- 3. APPROVED BY (Manager) -->
+          <td>
+            Approved by,<br>
+            <div class="sign-box">
+              <% if (wo && wo.nama_approved && wo.ttd_approved) { %>
+              <img src="<%= wo.ttd_approved %>" alt="TTD Approved" class="sign-img">
+              <% } %>
+            </div>
+            (<input type="text" class="sign-input" value="<%= wo && wo.nama_approved ? wo.nama_approved : '' %>" readonly>)<br>
+            <div class="bold">Shorebase Manager</div>
+          </td>
+        </tr>
+      </table>
 
-</div>
+      <div style="text-align: center; margin-top: 30px; margin-bottom: 30px;">
+        <% if (!wo) { %>
+        <button type="submit" class="btn-action btn-success">
+          Submit Pengajuan WO
+        </button>
+
+        <% } else if (wo && wo.status === 'Draft' && (user.id === wo.prepared_by || user.role === 'Super Admin')) { %>
+        <button type="submit" name="action" value="resubmit" class="btn-action btn-primary">
+          Ajukan Ulang WO
+        </button>
+
+        <% } else if (wo.status === 'Submitted' && (user.role === 'Manager' || user.role === 'Super Admin')) { %>
+        <!-- TAHAP 1: MANAGER APPROVE TERLEBIH DAHULU -->
+        <button type="submit" name="action" value="manager_approve" class="btn-action btn-success">
+          Approve (Shorebase Manager)
+        </button>
+        <button type="submit" name="action" value="reject" class="btn-action btn-danger">
+          Tolak WO
+        </button>
+
+        <% } else if (wo.status === 'Reviewed' && (user.role === 'Supervisor' || user.role === 'Team Leader' || user.role === 'Super Admin')) { %>
+        <!-- TAHAP 2: SUPERVISOR / TEAM LEADER APPROVE SETELAH MANAGER -->
+        <% if (user.role === 'Super Admin' || (wo.team && user.team && wo.team === user.team)) { %>
+        <button type="submit" name="action" value="spv_approve" class="btn-action btn-primary">
+          Approve & Review (Team Leader/Supv)
+        </button>
+        <button type="submit" name="action" value="reject" class="btn-action btn-danger">
+          Tolak WO
+        </button>
+        <% } else { %>
+        <div style="color: #dc3545; font-weight: 600;">
+          Menunggu Approval dari Team Leader / SPV <%= wo.team %>
+        </div>
+        <% } %>
+
+        <% } else if (wo.status === 'Submitted' && (user.role === 'Supervisor' || user.role === 'Team Leader')) { %>
+        <!-- PESAN JIKA SPV MEMBUKA WO YANG BELUM DI-APPROVE MANAGER -->
+        <div style="color: #17a2b8; font-weight: 600;">
+          Menunggu Persetujuan Tahap 1 dari Shorebase Manager
+        </div>
+        <% } %>
+
+        <br><br>
+      </div>
+      <div class="section-title">LEMBAR PERSETUJUAN/PENYELESAIAN PEKERJAAN</div>
+
+      <table class="form-table">
+        <tr>
+          <td width="40%">
+            <div class="bold">Detail Pekerjaan yang Dilakukan:</div>
+            <textarea class="textarea-lines" name="detail_pekerjaan" <%= wo && wo.status === 'Approved' && (user.id === wo.prepared_by || user.role === 'Super Admin') ? '' : 'readonly' %>><%= wo ? (wo.detail_pekerjaan || (wo.status === 'Approved' ? wo.uraian_pekerjaan : '')) : '' %></textarea>
+          </td>
+          <td width="30%">
+            <div class="bold">Completion Status:</div>
+            <textarea class="textarea-lines" name="completion_status" <%= wo && wo.status === 'Approved' && (user.id === wo.prepared_by || user.role === 'Super Admin') ? '' : 'readonly' %>><%= wo ? wo.completion_status : '' %></textarea>
+          </td>
+          <td width="30%">
+            <div class="bold">Biaya Aktual (Jika Ada):</div>
+            <div style="margin-top:10px;">
+              <div>Manpower: Rp <input type="number" name="biaya_manpower" class="cost-input" style="width: 100px;" value="<%= wo ? wo.biaya_manpower : '0' %>" <%= wo && wo.status === 'Approved' && (user.id === wo.prepared_by || user.role === 'Super Admin') ? '' : 'readonly' %>></div>
+              <br>
+              <div>Material: Rp <input type="number" name="biaya_material" class="cost-input" style="width: 100px;" value="<%= wo ? wo.biaya_material : '0' %>" <%= wo && wo.status === 'Approved' && (user.id === wo.prepared_by || user.role === 'Super Admin') ? '' : 'readonly' %>></div>
+              <br>
+              <div>Lain-lain: Rp <input type="number" name="biaya_lain" class="cost-input" style="width: 100px;" value="<%= wo ? wo.biaya_lain : '0' %>" <%= wo && wo.status === 'Approved' && (user.id === wo.prepared_by || user.role === 'Super Admin') ? '' : 'readonly' %>></div>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <table class="sign-table">
+        <tr>
+          <!-- 1. PERFORMED BY -->
+          <td>
+            Performed by,<br>
+            <div class="sign-box">
+              <% if (wo && (wo.status === 'Completed' || wo.status === 'Closed') && wo.ttd_performed) { %>
+              <img src="<%= wo.ttd_performed %>" alt="TTD Performed" class="sign-img">
+              <% } %>
+            </div>
+            (<input type="text" class="sign-input" value="<%= wo && (wo.status === 'Completed' || wo.status === 'Closed') ? wo.nama_performed : '' %>" readonly>)<br>
+            <div class="bold">Dept: <input type="text" value="<%= wo && (wo.status === 'Completed' || wo.status === 'Closed') ? (wo.team_performed || wo.team) : '' %>" readonly style="width:120px;border:none;border-bottom:2px dotted #000;"></div>
+          </td>
+
+          <!-- 2. VERIFIED BY -->
+          <td>
+            Verified by,<br>
+            <div class="sign-box">
+              <% if (wo && (wo.status === 'Closed' || wo.verified_by) && wo.ttd_verified) { %>
+              <img src="<%= wo.ttd_verified %>" alt="TTD Verified" class="sign-img">
+              <% } %>
+            </div>
+            (<input type="text" class="sign-input" value="<%= wo && (wo.status === 'Closed' || wo.verified_by) ? wo.nama_verified : '' %>" readonly>)<br>
+            <div class="bold">Team Leader/Supv.</div>
+          </td>
+
+          <!-- 3. RECEIVED BY -->
+          <td>
+            Received by,<br>
+            <div class="sign-box">
+              <% if (wo && wo.status === 'Closed' && wo.ttd_received) { %>
+              <img src="<%= wo.ttd_received %>" alt="TTD Received" class="sign-img">
+              <% } %>
+            </div>
+            (<input type="text" class="sign-input" value="<%= wo && wo.status === 'Closed' ? wo.nama_received : '' %>" readonly>)<br>
+            <div class="bold">Dept: <input type="text" value="<%= wo && wo.status === 'Closed' ? (wo.team_received || wo.team) : '' %>" readonly style="width:120px;border:none;border-bottom:2px dotted #000;"></div>
+          </td>
+        </tr>
+      </table>
+
+      <% if (wo && wo.status === 'Approved' && (user.id === wo.prepared_by || user.role === 'Super Admin')) { %>
+      <div style="text-align: center; margin-top: 30px;">
+        <button type="submit" name="action" value="complete" class="btn-action btn-warning">
+          Simpan & Selesaikan Pekerjaan
+        </button>
+      </div>
+
+      <% } else if (wo && wo.status === 'Completed' && !wo.verified_by && (user.role === 'Supervisor' || user.role === 'Team Leader' || user.role === 'Super Admin')) { %>
+      <div style="text-align: center; margin-top: 30px;">
+        <button type="submit" name="action" value="verify" class="btn-action btn-info">
+          Verifikasi Hasil Pekerjaan
+        </button>
+      </div>
+
+      <% } else if (wo && wo.status === 'Completed' && wo.verified_by && (user.id === wo.prepared_by || user.role === 'Super Admin')) { %>
+      <div style="text-align: center; margin-top: 30px;">
+        <button type="submit" name="action" value="close" class="btn-action btn-success">
+          Terima Hasil & Close WO
+        </button>
+      </div>
+      <% } %>
+
+    </form>
+
+  </div>
 
 </body>
+
 </html>

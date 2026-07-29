@@ -10,6 +10,21 @@ const multer = require('multer');
 const app = express();
 const PORT = 3005;
 
+function normalizePublicAssetPath(filePath) {
+  if (!filePath) return filePath;
+  if (/^(https?:)?\/\//i.test(filePath) || filePath.startsWith('data:')) {
+    return filePath;
+  }
+
+  const normalizedPath = filePath.replace(/\\/g, '/').replace(/^\.?\//, '');
+
+  if (normalizedPath.startsWith('public/')) {
+    return '/' + normalizedPath.slice('public/'.length);
+  }
+
+  return normalizedPath.startsWith('/') ? normalizedPath : '/' + normalizedPath;
+}
+
 // 2. Konfigurasi Koneksi Database (Ambil dari .env)
 const db = mysql.createPool({
   host: process.env.DB_HOST,
@@ -47,7 +62,14 @@ app.use(
 );
 
 // Mengizinkan folder public diakses oleh browser (untuk melihat foto/file)
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.use((req, res, next) => {
+  if (req.session?.user?.ttd) {
+    req.session.user.ttd = normalizePublicAssetPath(req.session.user.ttd);
+  }
+  next();
+});
 
 // Konfigurasi penyimpanan Multer
 const storage = multer.diskStorage({
@@ -81,9 +103,10 @@ app.post('/login', (req, res) => {
 
     if (results.length > 0) {
       // Jika sukses, simpan data user ke dalam Session
+      results[0].ttd = normalizePublicAssetPath(results[0].ttd);
       req.session.user = results[0];
       console.log(`🔑 ${req.session.user.nama} berhasil login!`);
-      res.redirect('/'); // Arahkan ke form WO
+      res.redirect('/');
     } else {
       res.send(
         '<script>alert("Username atau Password salah!"); window.location.href="/login";</script>'
@@ -185,33 +208,46 @@ app.get('/view-wo/:id', (req, res) => {
   const woId = req.params.id;
   const teams = ['Team Sipil', 'Team Electric', 'Team Operation', 'Team Lainnya'];
 
-  // Query untuk mengambil data WO beserta nama-nama yang sudah tanda tangan (jika ada)
+  // Ambil data WO beserta Nama & TTD dari masing-masing User
   const sql = ` 
-         SELECT wo.*, 
-                u1.nama AS nama_prepared, u1.team AS team_prepared, 
-                u2.nama AS nama_reviewed, 
-                u3.nama AS nama_approved,
-                u4.nama AS nama_performed, u4.team AS team_performed,
-                u5.nama AS nama_verified,
-                u6.nama AS nama_received, u6.team AS team_received
-         FROM work_orders wo 
-         LEFT JOIN users u1 ON wo.prepared_by = u1.id 
-         LEFT JOIN users u2 ON wo.reviewed_by = u2.id 
-         LEFT JOIN users u3 ON wo.approved_by = u3.id 
-         LEFT JOIN users u4 ON wo.performed_by = u4.id 
-         LEFT JOIN users u5 ON wo.verified_by = u5.id 
-         LEFT JOIN users u6 ON wo.received_by = u6.id 
-         WHERE wo.id = ? 
-     `;
+    SELECT wo.*, 
+           u1.nama AS nama_prepared, u1.team AS team_prepared, u1.ttd AS ttd_prepared,
+           u2.nama AS nama_reviewed, u2.ttd AS ttd_reviewed,
+           u3.nama AS nama_approved, u3.ttd AS ttd_approved,
+           u4.nama AS nama_performed, u4.team AS team_performed, u4.ttd AS ttd_performed,
+           u5.nama AS nama_verified, u5.ttd AS ttd_verified,
+           u6.nama AS nama_received, u6.team AS team_received, u6.ttd AS ttd_received
+    FROM work_orders wo 
+    LEFT JOIN users u1 ON wo.prepared_by = u1.id 
+    LEFT JOIN users u2 ON wo.reviewed_by = u2.id 
+    LEFT JOIN users u3 ON wo.approved_by = u3.id 
+    LEFT JOIN users u4 ON wo.performed_by = u4.id 
+    LEFT JOIN users u5 ON wo.verified_by = u5.id 
+    LEFT JOIN users u6 ON wo.received_by = u6.id 
+    WHERE wo.id = ? 
+  `;
 
   db.query(sql, [woId], (err, results) => {
     if (err) throw err;
     if (results.length === 0) return res.send('Work Order tidak ditemukan.');
 
-    // Render form-wo dengan mengirimkan data user login DAN data WO hasil query
+    const workOrder = results[0];
+    const ttdFields = [
+      'ttd_prepared',
+      'ttd_reviewed',
+      'ttd_approved',
+      'ttd_performed',
+      'ttd_verified',
+      'ttd_received',
+    ];
+
+    ttdFields.forEach((field) => {
+      workOrder[field] = normalizePublicAssetPath(workOrder[field]);
+    });
+
     res.render('form-wo', {
       user: req.session.user,
-      wo: results[0],
+      wo: workOrder,
       teams,
     });
   });
