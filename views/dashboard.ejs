@@ -100,6 +100,13 @@
         .stat-card.submitted { border-color: #ffc107; }
         .stat-card.approved { border-color: #198754; }
         .stat-card.completed { border-color: #0dcaf0; }
+        .stat-card.cost { border-color: #7c3aed; }
+        .stat-sub {
+            font-size: 12px;
+            color: #888;
+            margin-top: 2px;
+            font-weight: 500;
+        }
 
         .stat-icon {
             font-size: 32px;
@@ -311,6 +318,140 @@
             display: block;
         }
 
+        /* ---------- Toast Notification ---------- */
+        .toast-container {
+            position: fixed;
+            top: 90px;
+            right: 30px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .toast {
+            min-width: 280px;
+            max-width: 420px;
+            padding: 14px 18px 14px 14px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            animation: toastIn .35s cubic-bezier(.2,.9,.3,1.2);
+            border-left: 5px solid rgba(255,255,255,0.4);
+        }
+        .toast-success { background: linear-gradient(135deg,#198754,#146c43); }
+        .toast-error { background: linear-gradient(135deg,#dc3545,#b02a37); }
+        .toast-warn { background: linear-gradient(135deg,#fd7e14,#d9680c); }
+        .toast-info { background: linear-gradient(135deg,#0f4c81,#0b3c66); }
+        .toast-close {
+            margin-left: auto;
+            background: rgba(255,255,255,0.18);
+            border: none;
+            color: white;
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            font-size: 13px;
+            cursor: pointer;
+            line-height: 22px;
+        }
+        @keyframes toastIn { from { opacity:0; transform: translateX(60px);} to { opacity:1; transform: translateX(0);} }
+        .toast.fade-out { animation: toastOut .3s ease forwards; }
+        @keyframes toastOut { to { opacity:0; transform: translateX(60px);} }
+
+        /* ---------- Team Summary Cards ---------- */
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+        .team-card {
+            background: white;
+            border-radius: 12px;
+            padding: 18px 20px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+            border-top: 4px solid #0f4c81;
+        }
+        .team-card-title {
+            font-weight: 700;
+            color: #2c3e50;
+            font-size: 14px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .team-bar {
+            display: flex;
+            height: 10px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: #f1f3f9;
+            margin-bottom: 10px;
+        }
+        .team-bar-fill { height: 100%; transition: width .4s ease; }
+        .team-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+        }
+        .team-meta strong { color: #2c3e50; }
+
+        /* ---------- Pagination ---------- */
+        .pagination-wrap {
+            padding: 18px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            background: #f8f9fc;
+            border-top: 1px solid #ecedf3;
+        }
+        .pagination-info { font-size: 13px; color: #666; }
+        .pagination-info strong { color: #0f4c81; }
+        .pagination-buttons { display: flex; gap: 6px; }
+        .page-btn {
+            padding: 7px 13px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background: white;
+            color: #495057;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all .2s ease;
+        }
+        .page-btn:hover:not(:disabled) { background: #0f4c81; color: white; border-color: #0f4c81; }
+        .page-btn.active { background: #0f4c81; color: white; border-color: #0f4c81; }
+        .page-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255,255,255,0.6);
+            backdrop-filter: blur(2px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        .loading-spinner {
+            width: 52px; height: 52px;
+            border: 5px solid #e0e7ff;
+            border-top-color: #0f4c81;
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
         /* Modal */
         .modal-overlay {
             position: fixed;
@@ -409,45 +550,100 @@
 
 <div class="container">
     
+    <!-- Notification Toast -->
+    <% if (flash) { %>
+    <div class="toast-container">
+        <div class="toast toast-<%= flash.type === 'warn' ? 'warn' : flash.type %>" id="flashToast">
+            <% if (flash.type === 'success') { %><iconify-icon icon="mdi:check-circle-outline" width="20" height="20"></iconify-icon>
+            <% } else if (flash.type === 'error') { %><iconify-icon icon="mdi:alert-circle-outline" width="20" height="20"></iconify-icon>
+            <% } else if (flash.type === 'warn') { %><iconify-icon icon="mdi:alert-outline" width="20" height="20"></iconify-icon>
+            <% } else { %><iconify-icon icon="mdi:information-outline" width="20" height="20"></iconify-icon> <% } %>
+            <span><%= flash.message %></span>
+            <button class="toast-close" onclick="closeToast()">×</button>
+        </div>
+    </div>
+    <% } %>
+
     <!-- Statistics Cards -->
     <div class="stats-grid">
         <div class="stat-card total">
-            <div class="stat-icon"></div>
-            <p class="stat-value"><%= workOrders.length %></p>
+            <div class="stat-icon"><iconify-icon icon="mdi:file-document-multiple" style="color: #0f4c81;"></iconify-icon></div>
+            <p class="stat-value"><%= pagination.totalItems %></p>
             <p class="stat-label">Total Work Order</p>
+            <% if (pagination.search || pagination.fStatus !== 'all' || pagination.fTeam !== 'all') { %>
+            <p class="stat-sub">Terfilter dari seluruh data</p>
+            <% } %>
         </div>
         <div class="stat-card submitted">
-            <div class="stat-icon"></div>
-            <p class="stat-value"><%= workOrders.filter(wo => wo.status === 'Submitted' || wo.status === 'Reviewed').length %></p>
+            <div class="stat-icon"><iconify-icon icon="mdi:clock-check-outline" style="color: #ffc107;"></iconify-icon></div>
+            <p class="stat-value"><%= (statsCounts.Submitted || 0) + (statsCounts.Reviewed || 0) + (statsCounts.Draft || 0) %></p>
             <p class="stat-label">Menunggu Persetujuan</p>
+            <p class="stat-sub">Draft: <%= statsCounts.Draft || 0 %> · Submitted: <%= statsCounts.Submitted || 0 %> · Reviewed: <%= statsCounts.Reviewed || 0 %></p>
         </div>
         <div class="stat-card approved">
-            <div class="stat-icon"></div>
-            <p class="stat-value"><%= workOrders.filter(wo => wo.status === 'Approved').length %></p>
-            <p class="stat-label">Disetujui</p>
+            <div class="stat-icon"><iconify-icon icon="mdi:check-decagram" style="color: #198754;"></iconify-icon></div>
+            <p class="stat-value"><%= statsCounts.Approved || 0 %></p>
+            <p class="stat-label">Disetujui (On Progress)</p>
         </div>
         <div class="stat-card completed">
-            <div class="stat-icon"></div>
-            <p class="stat-value"><%= workOrders.filter(wo => wo.status === 'Completed' || wo.status === 'Closed').length %></p>
-            <p class="stat-label">Selesai</p>
+            <div class="stat-icon"><iconify-icon icon="mdi:check-circle-outline" style="color: #0dcaf0;"></iconify-icon></div>
+            <p class="stat-value"><%= (statsCounts.Completed || 0) + (statsCounts.Closed || 0) %></p>
+            <p class="stat-label">Selesai & Closed</p>
+            <p class="stat-sub">Closed: <%= statsCounts.Closed || 0 %> · Completed: <%= statsCounts.Completed || 0 %></p>
         </div>
+        <div class="stat-card cost">
+            <div class="stat-icon"><iconify-icon icon="mdi:cash-multiple" style="color: #7c3aed;"></iconify-icon></div>
+            <p class="stat-value" style="font-size:23px;"><%= formatRupiah(grandTotalBiaya) %></p>
+            <p class="stat-label">Total Realisasi Biaya</p>
+        </div>
+    </div>
+
+    <!-- Team Progress Summary -->
+    <div class="team-grid">
+        <% validTeams.forEach(t => { const ts = teamStats[t] || { total: 0, pending: 0, done: 0 }; const pctPending = ts.total ? Math.round(ts.pending / ts.total * 100) : 0; const pctDone = ts.total ? Math.round(ts.done / ts.total * 100) : 0; %>
+        <div class="team-card">
+            <div class="team-card-title"><iconify-icon icon="mdi:account-group" style="color:#0f4c81;"></iconify-icon> <%= t %></div>
+            <div class="team-bar">
+                <div class="team-bar-fill" style="width:<%= pctPending %>%; background: linear-gradient(90deg,#ffc107,#fd7e14);" title="Pending"></div>
+                <div class="team-bar-fill" style="width:<%= pctDone %>%; background: linear-gradient(90deg,#198754,#0dcaf0);" title="Selesai"></div>
+            </div>
+            <div class="team-meta">
+                <span>Total: <strong><%= ts.total %></strong></span>
+                <span style="color:#d97706;">Pending: <strong><%= ts.pending %></strong></span>
+                <span style="color:#059669;">Done: <strong><%= ts.done %></strong></span>
+            </div>
+        </div>
+        <% }) %>
     </div>
 
     <div class="page-header">
         <h3>Daftar Work Order</h3>
         <div class="controls">
             <div class="search-box">
-                <span class="search-icon"></span>
-                <input type="text" id="searchInput" placeholder="Cari NO. WO / Uraian...">
+                <span class="search-icon"><iconify-icon icon="mdi:magnify" style="color: #aaa;"></iconify-icon></span>
+                <input type="text" id="searchInput" placeholder="Cari NO. WO / Uraian..." value="<%= pagination.search %>">
             </div>
             <select class="filter-select" id="statusFilter">
-                <option value="all">Semua Status</option>
-                <option value="Draft">Draft</option>
-                <option value="Submitted">Submitted</option>
-                <option value="Reviewed">Reviewed</option>
-                <option value="Approved">Approved</option>
-                <option value="Completed">Completed</option>
-                <option value="Closed">Closed</option>
+                <option value="all" <%= pagination.fStatus === 'all' ? 'selected' : '' %>>Semua Status</option>
+                <option value="Draft" <%= pagination.fStatus === 'Draft' ? 'selected' : '' %>>Draft</option>
+                <option value="Submitted" <%= pagination.fStatus === 'Submitted' ? 'selected' : '' %>>Submitted</option>
+                <option value="Reviewed" <%= pagination.fStatus === 'Reviewed' ? 'selected' : '' %>>Reviewed</option>
+                <option value="Approved" <%= pagination.fStatus === 'Approved' ? 'selected' : '' %>>Approved</option>
+                <option value="Completed" <%= pagination.fStatus === 'Completed' ? 'selected' : '' %>>Completed</option>
+                <option value="Closed" <%= pagination.fStatus === 'Closed' ? 'selected' : '' %>>Closed</option>
+            </select>
+            <select class="filter-select" id="teamFilter">
+                <option value="all" <%= pagination.fTeam === 'all' ? 'selected' : '' %>>Semua Team</option>
+                <% validTeams.forEach(t => { %>
+                <option value="<%= t %>" <%= pagination.fTeam === t ? 'selected' : '' %>><%= t %></option>
+                <% }) %>
+            </select>
+            <select class="filter-select" id="sortBySelect">
+                <option value="id_desc" <%= pagination.sortBy === 'id_desc' ? 'selected' : '' %>>Terbaru</option>
+                <option value="id_asc" <%= pagination.sortBy === 'id_asc' ? 'selected' : '' %>>Terlama</option>
+                <option value="no_wo_asc" <%= pagination.sortBy === 'no_wo_asc' ? 'selected' : '' %>>No. WO (A-Z)</option>
+                <option value="no_wo_desc" <%= pagination.sortBy === 'no_wo_desc' ? 'selected' : '' %>>No. WO (Z-A)</option>
+                <option value="biaya_desc" <%= pagination.sortBy === 'biaya_desc' ? 'selected' : '' %>>Biaya Tertinggi</option>
             </select>
             <% if (user.role === 'Pemohon') { %>
                 <button id="openModalBtn" class="btn btn-primary">+ Buat WO Baru</button>
@@ -460,36 +656,61 @@
             <table id="woTable">
                 <thead>
                     <tr>
+                        <th width="5%">No.</th>
                         <th width="10%">No. WO</th>
-                        <th width="30%">Uraian Pekerjaan</th>
-                        <th width="10%">Team</th>
-                        <th width="15%">Lokasi</th>
-                        <th width="12%">Pemohon</th>
-                        <th width="10%">Status</th>
-                        <th width="8%">Aksi</th>
+                        <th width="28%">Uraian Pekerjaan</th>
+                        <th width="9%">Team</th>
+                        <th width="12%">Lokasi</th>
+                        <th width="10%">Biaya</th>
+                        <th width="11%">Pemohon</th>
+                        <th width="8%">Status</th>
+                        <th width="7%">Aksi</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
                     <% if (workOrders.length === 0) { %>
                         <tr>
-                            <td colspan="7" class="empty-state">
-                                <span class="empty-state-icon">📭</span>
-                                Belum ada data Work Order yang masuk.
+                            <td colspan="9" class="empty-state">
+                                <span class="empty-state-icon"><iconify-icon icon="mdi:inbox-outline" width="72" height="72" style="color:#cbd5e1;"></iconify-icon></span>
+                                <% if (pagination.search || pagination.fStatus !== 'all' || pagination.fTeam !== 'all') { %>
+                                    Tidak ada Work Order yang cocok dengan filter.<br><br>
+                                    <a href="/?page=1" style="padding:10px 20px; background:#0f4c81; color:white; border-radius:10px; text-decoration:none; font-weight:600;">🗑️ Reset Filter</a>
+                                <% } else { %>
+                                    Belum ada data Work Order yang masuk.<br><br>
+                                    <% if (user.role === 'Pemohon') { %>
+                                    <button id="emptyCtaBtn" class="btn btn-primary" style="padding:12px 26px; font-size:15px;">✨ Buat Work Order Pertama</button>
+                                    <% } %>
+                                <% } %>
                             </td>
                         </tr>
                     <% } else { %>
-                        <% workOrders.forEach(wo => { %>
-                            <tr class="wo-row" data-status="<%= wo.status %>">
+                        <% workOrders.forEach((wo, i) => { %>
+                            <tr class="wo-row">
+                                <td><%= (pagination.page - 1) * pagination.perPage + i + 1 %>.</td>
                                 <td><strong style="color: #0f4c81;"><%= wo.no_wo %></strong></td>
-                                <td><%= wo.uraian_pekerjaan.length > 60 ? wo.uraian_pekerjaan.substring(0, 60) + '...' : wo.uraian_pekerjaan %></td>
-                                <td><%= wo.team || '-' %></td>
-                                <td>📍 <%= wo.lokasi %></td>
+                                <td>
+                                    <div style="max-width:340px; line-height:1.5;"><%= wo.uraian_pekerjaan.length > 80 ? wo.uraian_pekerjaan.substring(0, 80) + '...' : wo.uraian_pekerjaan %></div>
+                                    <% if (wo.reject_reason) { %>
+                                        <div style="margin-top:6px; background:#fef2f2; color:#991b1b; padding:6px 10px; border-radius:6px; font-size:12px; border-left:3px solid #ef4444;">
+                                            <strong>⚠️ Ditolak:</strong> <%= wo.reject_reason %>
+                                        </div>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <% if (wo.team) { %>
+                                    <span style="font-size:12px; padding:3px 10px; background:#e0edff; color:#0f4c81; border-radius:20px; font-weight:600;"><%= wo.team %></span>
+                                    <% } else { %>
+                                    -
+                                    <% } %>
+                                </td>
+                                <td>📍 <%= wo.lokasi.length > 25 ? wo.lokasi.substring(0, 25) + '...' : wo.lokasi %></td>
+                                <td style="font-weight:600; color:#16a34a;"><%= wo.total_biaya > 0 ? formatRupiah(wo.total_biaya) : '<span style="color:#9ca3af;">-</span>' %></td>
                                 <td><%= wo.nama_pemohon || '-' %></td>
                                 <td>
                                     <span class="status-badge <%= wo.status %>"><%= wo.status %></span>
                                 </td>
                                 <td>
-                                    <a href="/view-wo/<%= wo.id %>" class="btn btn-outline">👁️ Lihat</a>
+                                    <a href="/view-wo/<%= wo.id %>" class="btn btn-outline" style="padding:6px 10px; font-size:12px;">👁️ Lihat</a>
                                 </td>
                             </tr>
                         <% }) %>
@@ -497,8 +718,41 @@
                 </tbody>
             </table>
         </div>
+        <% if (workOrders.length > 0 || pagination.totalPages > 1) { %>
+        <div class="pagination-wrap">
+            <div class="pagination-info">
+                Menampilkan <strong><%= workOrders.length === 0 ? 0 : (pagination.page - 1) * pagination.perPage + 1 %> - <%= Math.min(pagination.page * pagination.perPage, pagination.totalItems) %></strong> dari <strong><%= pagination.totalItems %></strong> Work Order
+            </div>
+            <div class="pagination-buttons">
+                <% 
+                   const baseParams = new URLSearchParams();
+                   if (pagination.fStatus !== 'all') baseParams.set('status', pagination.fStatus);
+                   if (pagination.fTeam !== 'all') baseParams.set('team', pagination.fTeam);
+                   if (pagination.sortBy !== 'id_desc') baseParams.set('sortBy', pagination.sortBy);
+                   if (pagination.search) baseParams.set('q', pagination.search);
+                   const baseQ = baseParams.toString() ? '&' + baseParams.toString() : '';
+                %>
+                <a class="page-btn" href="/?page=1<%= baseQ %>" <% if (!pagination.hasPrev) { %>disabled style="pointer-events:none;"<% } %>>« First</a>
+                <a class="page-btn" href="/?page=<%= pagination.page - 1 %><%= baseQ %>" <% if (!pagination.hasPrev) { %>disabled style="pointer-events:none;"<% } %>>‹ Prev</a>
+                <% 
+                   let startP = Math.max(1, pagination.page - 2);
+                   let endP = Math.min(pagination.totalPages, pagination.page + 2);
+                   if (startP > 1) { %><span class="page-btn" style="border:none; background:none; cursor:default;">...</span><% }
+                   for (let p = startP; p <= endP; p++) { %>
+                <a class="page-btn <%= p === pagination.page ? 'active' : '' %>" href="/?page=<%= p %><%= baseQ %>"><%= p %></a>
+                <% } if (endP < pagination.totalPages) { %><span class="page-btn" style="border:none; background:none; cursor:default;">...</span><% } %>
+                <a class="page-btn" href="/?page=<%= pagination.page + 1 %><%= baseQ %>" <% if (!pagination.hasNext) { %>disabled style="pointer-events:none;"<% } %>>Next ›</a>
+                <a class="page-btn" href="/?page=<%= pagination.totalPages %><%= baseQ %>" <% if (!pagination.hasNext) { %>disabled style="pointer-events:none;"<% } %>>Last »</a>
+            </div>
+        </div>
+        <% } %>
     </div>
 
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
 </div>
 
 <!-- Team Selection Modal -->
@@ -520,59 +774,72 @@
 </div>
 
 <script>
-    // Search and Filter functionality
+    // Toast notification auto-dismiss + close handler
+    let toastTimer;
+    function closeToast() {
+        const t = document.getElementById('flashToast');
+        if (t) { t.classList.add('fade-out'); setTimeout(()=>t.remove(), 300); }
+    }
+    <% if (flash) { %>
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(closeToast, 4500);
+    <% } %>
+
+    function showLoading() { document.getElementById('loadingOverlay').style.display = 'flex'; }
+
+    // Server-side Search + Filter + Sort
     const searchInput = document.getElementById('searchInput');
     const statusFilter = document.getElementById('statusFilter');
-    const tableRows = document.querySelectorAll('#tableBody .wo-row');
+    const teamFilter = document.getElementById('teamFilter');
+    const sortBySelect = document.getElementById('sortBySelect');
+    let searchTimer;
 
-    function filterTable() {
-        const searchTerm = searchInput.value.toLowerCase();
-        const selectedStatus = statusFilter.value;
-
-        tableRows.forEach(row => {
-            const noWo = row.cells[0].textContent.toLowerCase();
-            const uraian = row.cells[1].textContent.toLowerCase();
-            const team = row.cells[2].textContent.toLowerCase();
-            const status = row.getAttribute('data-status');
-
-            const matchesSearch = noWo.includes(searchTerm) || uraian.includes(searchTerm) || team.includes(searchTerm);
-            const matchesStatus = selectedStatus === 'all' || status === selectedStatus;
-
-            row.style.display = matchesSearch && matchesStatus ? '' : 'none';
-        });
+    function refreshWithFilters() {
+        showLoading();
+        const params = new URLSearchParams();
+        params.set('page', '1');
+        if (statusFilter.value !== 'all') params.set('status', statusFilter.value);
+        if (teamFilter.value !== 'all') params.set('team', teamFilter.value);
+        if (sortBySelect.value !== 'id_desc') params.set('sortBy', sortBySelect.value);
+        if (searchInput.value.trim()) params.set('q', searchInput.value.trim());
+        window.location.href = '/?' + params.toString();
     }
 
-    searchInput.addEventListener('input', filterTable);
-    statusFilter.addEventListener('change', filterTable);
+    searchInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') refreshWithFilters(); });
+    statusFilter?.addEventListener('change', refreshWithFilters);
+    teamFilter?.addEventListener('change', refreshWithFilters);
+    sortBySelect?.addEventListener('change', refreshWithFilters);
 
-    // Modal Logic
+    // Modal Logic (Team Selection for Create WO)
     const openModalBtn = document.getElementById('openModalBtn');
+    const emptyCtaBtn = document.getElementById('emptyCtaBtn');
     const teamModal = document.getElementById('teamModal');
     const cancelBtn = document.getElementById('cancelBtn');
     const confirmBtn = document.getElementById('confirmBtn');
     const teamSelect = document.getElementById('teamSelect');
 
-    openModalBtn?.addEventListener('click', () => {
+    function openTeamModal() {
         teamModal.style.display = 'flex';
         teamSelect.value = '';
-    });
+    }
+    openModalBtn?.addEventListener('click', openTeamModal);
+    emptyCtaBtn?.addEventListener('click', openTeamModal);
 
-    cancelBtn?.addEventListener('click', () => {
-        teamModal.style.display = 'none';
-    });
-
-    teamModal?.addEventListener('click', (e) => {
-        if (e.target === teamModal) {
-            teamModal.style.display = 'none';
-        }
-    });
+    cancelBtn?.addEventListener('click', () => { teamModal.style.display = 'none'; });
+    teamModal?.addEventListener('click', (e) => { if (e.target === teamModal) teamModal.style.display = 'none'; });
 
     confirmBtn?.addEventListener('click', () => {
         const selectedTeam = teamSelect.value;
         if (selectedTeam) {
+            showLoading();
             window.location.href = '/create-wo?team=' + encodeURIComponent(selectedTeam);
         } else {
-            alert('Silakan pilih team terlebih dahulu!');
+            // Use mini-toast instead of native alert
+            const warn = document.createElement('div');
+            warn.className = 'toast toast-warn'; warn.style.cssText='position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:99999;';
+            warn.innerHTML = '<iconify-icon icon="mdi:alert" width="20"></iconify-icon><span>Silakan pilih team terlebih dahulu!</span>';
+            document.body.appendChild(warn);
+            setTimeout(()=>warn.remove(), 2500);
         }
     });
 </script>
