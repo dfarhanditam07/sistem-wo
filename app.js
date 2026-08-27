@@ -30,11 +30,12 @@ function recordLoginFail(ip) {
   else existing.count++;
 }
 
-app.locals.formatRupiah = formatRupiah;
-
 // Inisialisasi aplikasi Express
 const app = express();
 const PORT = process.env.PORT || 3005;
+
+// Daftarkan helper ke app.locals agar tersedia di semua view EJS
+app.locals.formatRupiah = formatRupiah;
 
 function normalizePublicAssetPath(filePath) {
   if (!filePath) return filePath;
