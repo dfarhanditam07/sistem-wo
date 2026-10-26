@@ -6,6 +6,16 @@ const path = require('path');
 const session = require('express-session');
 const multer = require('multer');
 const fs = require('fs');
+const crypto = require('crypto');
+const {
+  DEPARTMENTS,
+  canAccessWorkOrder,
+  canEditSchedule,
+  isTeamTujuan,
+  isValidDateRange,
+  textInput,
+  workOrderScope,
+} = require('./lib/work-order');
 
 // Pastikan folder uploads selalu ada (Multer tidak auto-create direktori)
 const uploadDir = path.join(__dirname, 'public', 'uploads');
@@ -16,8 +26,26 @@ function formatRupiah(angka) {
   return 'Rp ' + parseFloat(angka || 0).toLocaleString('id-ID');
 }
 
+function dateInputValue(value) {
+  if (!value) return '';
+  if (!(value instanceof Date)) return String(value).slice(0, 10);
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function padZero(n, len = 3) {
   return String(n).padStart(len, '0');
+}
+
+// Redirect helper pengganti res.redirect('back') (Express 5 tidak lagi
+// menangani target 'back' secara otomatis sehingga akan redirect ke URL literal
+// "back" yang salah). Dipakai supaya pesan error validasi/upload membawa user
+// kembali ke form asal, bukan ke halaman yang tidak valid.
+function redirectBack(req, res, fallback = '/') {
+  const referer = req.get('Referer');
+  res.redirect(referer && referer.trim() ? referer : fallback);
 }
 
 // Login attempts limiter (sederhana in-memory)
@@ -26,7 +54,10 @@ function isLoginBlocked(ip) {
   const data = loginAttempts.get(ip);
   if (!data) return false;
   if (data.count >= 5 && Date.now() - data.firstAt < 15 * 60 * 1000) return true;
-  if (Date.now() - data.firstAt >= 15 * 60 * 1000) { loginAttempts.delete(ip); return false; }
+  if (Date.now() - data.firstAt >= 15 * 60 * 1000) {
+    loginAttempts.delete(ip);
+    return false;
+  }
   return false;
 }
 function recordLoginFail(ip) {
@@ -41,6 +72,7 @@ const PORT = process.env.PORT || 3005;
 
 // Daftarkan helper ke app.locals agar tersedia di semua view EJS
 app.locals.formatRupiah = formatRupiah;
+app.locals.dateInputValue = dateInputValue;
 
 function normalizePublicAssetPath(filePath) {
   if (!filePath) return filePath;
@@ -105,8 +137,41 @@ app.use((req, res, next) => {
   next();
 });
 
-// Mengizinkan folder public diakses oleh browser (untuk melihat foto/file)
-app.use(express.static(path.join(__dirname, 'public')));
+app.get('/uploads/:filename', (req, res) => {
+  if (!req.session.user) return res.status(401).send('Login diperlukan untuk membuka lampiran.');
+  const filename = req.params.filename;
+  if (!filename || path.basename(filename) !== filename || filename === '.' || filename === '..') {
+    return res.status(404).send('File tidak ditemukan.');
+  }
+  const assetPath = `/uploads/${filename}`;
+  db.query(
+    'SELECT * FROM work_orders WHERE evidence = ? OR FIND_IN_SET(?, lampiran) > 0',
+    [assetPath, assetPath],
+    (err, workOrders) => {
+      if (err) return handleErr(req, res, err);
+      if (workOrders.some((wo) => canAccessWorkOrder(req.session.user, wo))) {
+        return res.sendFile(path.join(uploadDir, filename));
+      }
+      db.query(
+        'SELECT id, team FROM users WHERE ttd IN (?, ?, ?)',
+        [assetPath, `uploads/${filename}`, `public/uploads/${filename}`],
+        (userErr, signatureOwners) => {
+          if (userErr) return handleErr(req, res, userErr);
+          const canViewSignature = signatureOwners.some(
+            (owner) =>
+              ['Manager', 'Super Admin'].includes(req.session.user.role) ||
+              String(owner.id) === String(req.session.user.id) ||
+              Boolean(req.session.user.team && owner.team === req.session.user.team)
+          );
+          if (!canViewSignature) return res.status(404).send('File tidak ditemukan.');
+          res.sendFile(path.join(uploadDir, filename));
+        }
+      );
+    }
+  );
+});
+
+app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
 
 app.use((req, res, next) => {
   if (req.session?.user?.ttd) {
@@ -115,17 +180,116 @@ app.use((req, res, next) => {
   next();
 });
 
+// ---------- KONFIGURASI UPLOAD (Multer) ----------
+// Satu sumber kebenaran untuk batas upload, dipakai backend (Multer) maupun
+// frontend (lewat app.locals di bawah) supaya pesan & validasi selalu konsisten.
+// Default 10MB/file & 5 file dipilih karena lampiran WO berupa hasil scan PDF/foto
+// RAB (umumnya < 5MB); batas ini cukup longgar untuk pemakaian wajar namun tetap
+// membatasi beban disk/koneksi dari upload yang tidak wajar. Bisa dioverride lewat
+// .env (MAX_UPLOAD_SIZE_MB / MAX_UPLOAD_FILES) tanpa mengubah kode.
+const MAX_FILE_SIZE_MB = Number(process.env.MAX_UPLOAD_SIZE_MB) || 10;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const MAX_UPLOAD_FILES = Number(process.env.MAX_UPLOAD_FILES) || 5;
+const ALLOWED_UPLOAD_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.pdf']);
+const ALLOWED_UPLOAD_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'application/pdf']);
+
+// Daftarkan ke app.locals supaya EJS (frontend) selalu sinkron dengan batas backend,
+// tanpa perlu meneruskan variabel ini secara manual di setiap res.render().
+app.locals.maxFileSizeMB = MAX_FILE_SIZE_MB;
+app.locals.maxUploadFiles = MAX_UPLOAD_FILES;
+
 // Konfigurasi penyimpanan Multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir); // Simpan ke folder ini
   },
   filename: (req, file, cb) => {
-    // Ganti nama file agar unik (menghindari nama file yang sama)
-    cb(null, Date.now() + '-' + file.originalname);
+    const extension = path.extname(file.originalname).toLowerCase();
+    const safeName = path
+      .basename(file.originalname, extension)
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .slice(0, 80);
+    const filename = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}-${safeName}${extension}`;
+    // Catat file yang akan ditulis oleh request ini. Multer hanya membersihkan
+    // file yang gagal secara best-effort: bila abort terjadi saat file masih
+    // ditulis, file parsial bisa tertinggal di disk. handleUpload() memakai
+    // daftar ini untuk menghapus sisa file saat upload ditolak.
+    (req.uploadedFilePaths = req.uploadedFilePaths || []).push(path.join(uploadDir, filename));
+    cb(null, filename);
   },
 });
-const upload = multer({ storage: storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: MAX_FILE_SIZE_BYTES, files: MAX_UPLOAD_FILES },
+  fileFilter: (req, file, cb) => {
+    // Validasi ganda: ekstensi DAN mimetype. Ekstensi saja mudah dipalsukan
+    // (rename .exe jadi .pdf), jadi keduanya harus cocok dengan whitelist.
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!ALLOWED_UPLOAD_EXTENSIONS.has(ext) || !ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
+      return cb(new Error('Jenis file harus JPG, PNG, atau PDF.'));
+    }
+    cb(null, true);
+  },
+});
+
+// Middleware auth dasar. PENTING: middleware ini HARUS dipasang SEBELUM middleware
+// Multer pada route upload, supaya request yang belum login/tidak berwenang ditolak
+// lebih dulu dan tidak sempat menulis file ke disk (keamanan + performa).
+function requireLogin(req, res, next) {
+  if (!req.session.user) return res.redirect('/login');
+  next();
+}
+function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!roles.includes(req.session.user.role)) {
+      req.session.flash = { type: 'error', message: 'Tidak diotorisasi.' };
+      return res.redirect('/');
+    }
+    next();
+  };
+}
+
+// Bungkus middleware Multer supaya error upload (ukuran file kelebihan, jumlah
+// file kelebihan, tipe file tidak valid) ditangani dengan flash message yang
+// ramah ke pengguna, bukan error page/stack trace bawaan Express.
+function handleUpload(multerMiddleware) {
+  return (req, res, next) => {
+    multerMiddleware(req, res, (err) => {
+      if (!err) return next();
+
+      let message = 'Gagal mengunggah file. Silakan coba lagi.';
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          message = `Ukuran setiap file maksimal ${MAX_FILE_SIZE_MB}MB.`;
+        } else if (err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE') {
+          message = `Maksimal ${MAX_UPLOAD_FILES} file dapat diunggah sekaligus.`;
+        } else {
+          message = 'Berkas gagal diunggah: ' + err.message;
+        }
+      } else if (err.message) {
+        message = err.message; // contoh: dari fileFilter -> "Jenis file harus JPG, PNG, atau PDF."
+      }
+
+      console.error('Upload error:', err.message);
+      // Bersihkan sisa file milik request ini. Bila tidak, file parsial/orphan
+      // menumpuk di disk setiap kali upload ditolak (boros storage) dan bisa
+      // dibuka jika namanya diketahui (risiko keamanan).
+      cleanupUploadedFiles(req);
+      req.session.flash = { type: 'error', message };
+      return redirectBack(req, res, '/');
+    });
+  };
+}
+
+// Hapus file yang tercatat pada request. ENOENT (sudah dihapus Multer) diabaikan.
+function cleanupUploadedFiles(req) {
+  (req.uploadedFilePaths || []).forEach((filePath) => {
+    fs.unlink(filePath, (err) => {
+      if (err && err.code !== 'ENOENT') console.error('Gagal menghapus file sisa:', err.message);
+    });
+  });
+  req.uploadedFilePaths = [];
+}
 
 // ==========================================
 // 4. ROUTING & LOGIN
@@ -140,7 +304,10 @@ app.get('/login', (req, res) => {
 app.post('/login', (req, res) => {
   const clientIp = req.ip || req.connection.remoteAddress;
   if (isLoginBlocked(clientIp)) {
-    req.session.flash = { type: 'error', message: 'Terlalu banyak percobaan login. Coba lagi 15 menit lagi.' };
+    req.session.flash = {
+      type: 'error',
+      message: 'Terlalu banyak percobaan login. Coba lagi 15 menit lagi.',
+    };
     return res.redirect('/login');
   }
 
@@ -186,11 +353,6 @@ app.get('/logout', (req, res) => {
 });
 
 // Helper: kirim notifikasi + redirect (tanpa alert inline JS)
-function flashRedirect(req, res, url, type, message) {
-  req.session.flash = { type, message };
-  res.redirect(url);
-}
-
 // 1. HALAMAN UTAMA: Dashboard dengan Pagination, Filter Team, Sort
 app.get('/', (req, res) => {
   if (!req.session.user) return res.redirect('/login');
@@ -199,7 +361,7 @@ app.get('/', (req, res) => {
   const perPage = 15;
   const offset = (page - 1) * perPage;
   const fStatus = req.query.status || 'all';
-  const fTeam = req.query.team || 'all';
+  const fTeam = DEPARTMENTS.includes(req.query.team) ? req.query.team : 'all';
   const sortBy = req.query.sortBy || 'id_desc';
   const search = (req.query.q || '').trim();
 
@@ -209,20 +371,30 @@ app.get('/', (req, res) => {
     id_asc: 'wo.id ASC',
     no_wo_asc: 'wo.no_wo ASC',
     no_wo_desc: 'wo.no_wo DESC',
-    biaya_desc: 'wo.total_biaya DESC',
   };
   const orderBy = sortMap[sortBy] || sortMap.id_desc;
 
-  // Build WHERE
-  const where = [];
-  const params = [];
-  if (fStatus !== 'all') { where.push('wo.status = ?'); params.push(fStatus); }
-  if (fTeam !== 'all') { where.push('wo.team = ?'); params.push(fTeam); }
-  if (search) { where.push('(wo.no_wo LIKE ? OR wo.uraian_pekerjaan LIKE ?)'); params.push(`%${search}%`, `%${search}%`); }
+  const scope = workOrderScope(req.session.user);
+  const where = scope.sql ? [scope.sql] : [];
+  const params = [...scope.params];
+  if (fStatus !== 'all') {
+    where.push('wo.status = ?');
+    params.push(fStatus);
+  }
+  if (fTeam !== 'all') {
+    where.push('wo.team = ?');
+    params.push(fTeam);
+  }
+  if (search) {
+    where.push('(wo.no_wo LIKE ? OR wo.uraian_pekerjaan LIKE ?)');
+    params.push(`%${search}%`, `%${search}%`);
+  }
   const whereSql = where.length ? 'WHERE ' + where.join(' AND ') : '';
 
   const listSql = `
-    SELECT wo.*, users.nama AS nama_pemohon
+    SELECT wo.*, users.nama AS nama_pemohon,
+           CASE WHEN wo.due_date < CURDATE()
+             AND wo.status NOT IN ('Completed', 'Closed') THEN 1 ELSE 0 END AS is_overdue
     FROM work_orders wo
     LEFT JOIN users ON wo.prepared_by = users.id
     ${whereSql}
@@ -231,15 +403,19 @@ app.get('/', (req, res) => {
   `;
   const countSql = `SELECT COUNT(*) AS total FROM work_orders wo ${whereSql}`;
 
+  const statsWhere = scope.sql ? `WHERE ${scope.sql}` : '';
   const allStatsSql = `
-    SELECT status, COUNT(*) AS cnt, COALESCE(SUM(total_biaya), 0) AS total_biaya
-    FROM work_orders
+    SELECT status, COUNT(*) AS cnt,
+           SUM(CASE WHEN due_date < CURDATE() AND status NOT IN ('Completed', 'Closed') THEN 1 ELSE 0 END) AS overdue
+    FROM work_orders wo
+    ${statsWhere}
     GROUP BY status
   `;
   const teamStatsSql = `
-    SELECT team, status, COUNT(*) AS cnt
-    FROM work_orders
-    WHERE team IS NOT NULL AND team <> ''
+    SELECT team, status, COUNT(*) AS cnt,
+           SUM(CASE WHEN due_date < CURDATE() AND status NOT IN ('Completed', 'Closed') THEN 1 ELSE 0 END) AS overdue
+    FROM work_orders wo
+    ${statsWhere ? `${statsWhere} AND` : 'WHERE'} team IS NOT NULL AND team <> ''
     GROUP BY team, status
   `;
 
@@ -251,22 +427,26 @@ app.get('/', (req, res) => {
     db.query(listSql, [...params, perPage, offset], (e2, listRes) => {
       if (e2) return handleErr(req, res, e2);
 
-      db.query(allStatsSql, (e3, allStats) => {
+      db.query(allStatsSql, scope.params, (e3, allStats) => {
         if (e3) return handleErr(req, res, e3);
-        db.query(teamStatsSql, (e4, teamStats) => {
+        db.query(teamStatsSql, scope.params, (e4, teamStats) => {
           if (e4) return handleErr(req, res, e4);
 
           const statsMap = {};
-          allStats.forEach(s => { statsMap[s.status] = s.cnt; });
-          let grandTotalBiaya = 0;
-          allStats.forEach(s => { grandTotalBiaya += parseFloat(s.totalBiaya || s.total_biaya || 0); });
-
+          const overdueCount = allStats.reduce((sum, row) => sum + Number(row.overdue || 0), 0);
+          allStats.forEach((s) => {
+            statsMap[s.status] = s.cnt;
+          });
           const teamStatsAgg = {};
-          teamStats.forEach(r => {
-            if (!teamStatsAgg[r.team]) teamStatsAgg[r.team] = { total: 0, pending: 0, done: 0 };
+          teamStats.forEach((r) => {
+            if (!teamStatsAgg[r.team])
+              teamStatsAgg[r.team] = { total: 0, pending: 0, done: 0, overdue: 0 };
             teamStatsAgg[r.team].total += r.cnt;
-            if (r.status === 'Submitted' || r.status === 'Reviewed' || r.status === 'Draft') teamStatsAgg[r.team].pending += r.cnt;
-            if (r.status === 'Completed' || r.status === 'Closed') teamStatsAgg[r.team].done += r.cnt;
+            teamStatsAgg[r.team].overdue += Number(r.overdue || 0);
+            if (r.status === 'Submitted' || r.status === 'Reviewed' || r.status === 'Draft')
+              teamStatsAgg[r.team].pending += r.cnt;
+            if (r.status === 'Completed' || r.status === 'Closed')
+              teamStatsAgg[r.team].done += r.cnt;
           });
 
           res.render('dashboard', {
@@ -275,14 +455,23 @@ app.get('/', (req, res) => {
             flash: res.locals.flash,
             formatRupiah,
             pagination: {
-              page, totalPages, totalItems, perPage,
-              hasPrev: page > 1, hasNext: page < totalPages,
-              fStatus, fTeam, sortBy, search,
+              page,
+              totalPages,
+              totalItems,
+              perPage,
+              hasPrev: page > 1,
+              hasNext: page < totalPages,
+              fStatus,
+              fTeam,
+              sortBy,
+              search,
             },
             statsCounts: statsMap,
-            grandTotalBiaya,
+            overdueCount,
             teamStats: teamStatsAgg,
-            validTeams: ['Team Sipil', 'Team Electric', 'Team Operation', 'Team Lainnya'],
+            validTeams: DEPARTMENTS,
+            canCreate: ['Pemohon', 'Manager', 'Super Admin'].includes(req.session.user.role),
+            canDelete: req.session.user.role === 'Super Admin',
           });
         });
       });
@@ -299,22 +488,33 @@ function handleErr(req, res, err) {
 // 2. HALAMAN TAMBAH WO + Auto-Generate No. WO
 app.get('/create-wo', (req, res) => {
   if (!req.session.user) return res.redirect('/login');
-  if (req.session.user.role !== 'Pemohon') {
-    req.session.flash = { type: 'warn', message: 'Hanya Pemohon yang dapat membuat WO baru.' };
+  const user = req.session.user;
+  if (!['Pemohon', 'Manager', 'Super Admin'].includes(user.role)) {
+    req.session.flash = { type: 'warn', message: 'Anda tidak memiliki akses untuk membuat WO.' };
     return res.redirect('/');
   }
 
-  const selectedTeam = req.query.team || null;
-  const validTeams = ['Team Sipil', 'Team Electric', 'Team Operation', 'Team Lainnya'];
-  if (!selectedTeam || !validTeams.includes(selectedTeam)) return res.redirect('/');
+  const selectedTeam = user.role === 'Pemohon' ? user.team : req.query.team;
+  if (!selectedTeam || !DEPARTMENTS.includes(selectedTeam)) {
+    req.session.flash = {
+      type: 'warn',
+      message:
+        user.role === 'Pemohon'
+          ? 'Akun Anda belum ditetapkan ke departemen.'
+          : 'Pilih departemen tujuan WO.',
+    };
+    return res.redirect('/');
+  }
 
-  // AUTO-GENERATE Nomor WO Format: FM-PS-OM-25/[TEAM-SHORT]/[NNN]/[MM]/[YYYY]
-  const teamMap = { 'Team Sipil': 'SIP', 'Team Electric': 'ELC', 'Team Operation': 'OPS', 'Team Lainnya': 'Lain' };
+  const teamCode = selectedTeam
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9]+/g, '')
+    .toUpperCase()
+    .slice(0, 5);
   const now = new Date();
   const mm = padZero(now.getMonth() + 1, 2);
   const yy = now.getFullYear();
-  const teamCode = teamMap[selectedTeam] || 'MIS';
-  const prefix = `FM-PS-OM-25/${teamCode}/__/${mm}/${yy}`;
 
   const seqSql = `SELECT COUNT(*) AS seq FROM work_orders WHERE team = ? AND MONTH(COALESCE(submitted_at, created_at, NOW())) = ? AND YEAR(COALESCE(submitted_at, created_at, NOW())) = ?`;
   db.query(seqSql, [selectedTeam, now.getMonth() + 1, yy], (err, seqRes) => {
@@ -325,59 +525,124 @@ app.get('/create-wo', (req, res) => {
     res.render('form-wo', {
       user: req.session.user,
       wo: null,
-      teams: validTeams,
+      teams: DEPARTMENTS,
       selectedTeam,
       autoNoWO: noWO,
       flash: res.locals.flash,
       rejectReason: null,
+      // Pemohon hanya mengisi data permohonan; jadwal pelaksanaan & jatuh tempo
+      // baru bisa diisi Team Tujuan setelah WO tersimpan.
+      canEditSchedule: false,
+      canSaveSchedule: false,
     });
   });
 });
 
 // 3. JALUR UPDATE: Menangkap data dan FILE dari form + validasi
-app.post('/submit-wo', upload.array('lampiran_file', 5), (req, res) => {
-  if (!req.session.user) return res.redirect('/login');
-  if (req.session.user.role !== 'Pemohon' && req.session.user.role !== 'Super Admin') {
-    req.session.flash = { type: 'error', message: 'Tidak diotorisasi.' };
-    return res.redirect('/');
+app.post(
+  '/submit-wo',
+  requireLogin,
+  requireRole('Pemohon', 'Manager', 'Super Admin'),
+  handleUpload(upload.array('lampiran_file', MAX_UPLOAD_FILES)),
+  (req, res) => {
+    const user = req.session.user;
+
+    let lampiranPath = null;
+    if (req.files && req.files.length > 0) {
+      const paths = req.files.map((file) => '/uploads/' + file.filename);
+      lampiranPath = paths.join(',');
+    }
+
+    // Basic server-side validation
+    const { no_wo, uraian_pekerjaan, lokasi, team } = req.body;
+    if (
+      typeof no_wo !== 'string' ||
+      !no_wo.trim() ||
+      typeof uraian_pekerjaan !== 'string' ||
+      !uraian_pekerjaan.trim() ||
+      typeof lokasi !== 'string' ||
+      !lokasi.trim() ||
+      !DEPARTMENTS.includes(team) ||
+      (user.role === 'Pemohon' && team !== user.team)
+    ) {
+      req.session.flash = {
+        type: 'error',
+        message:
+          'Periksa kembali field wajib (No. WO, Uraian Pekerjaan, Lokasi) dan departemen tujuan.',
+      };
+      return redirectBack(req, res, '/create-wo');
+    }
+
+    const dataPengajuan = {
+      no_wo: no_wo.trim(),
+      uraian_pekerjaan: uraian_pekerjaan.trim(),
+      lokasi: lokasi.trim(),
+      lampiran: lampiranPath,
+      status: 'Submitted',
+      prepared_by: user.id,
+      team: team,
+      submitted_at: new Date(),
+      // Jadwal pelaksanaan & tanggal jatuh tempo SENGAJA tidak diambil dari input Pemohon.
+      // Sesuai alur bisnis, kedua tanggal ini hanya boleh diisi oleh Team Tujuan
+      // (Supervisor/Team Leader lewat aksi 'update_schedule') atau Manager/Super Admin
+      // (lewat aksi 'update'). Nilai apa pun yang dikirim dari form create diabaikan di sini.
+      schedule_date: null,
+      due_date: null,
+      material_request_note: textInput(req.body.material_request_note) || null,
+    };
+
+    db.getConnection((connectionErr, connection) => {
+      if (connectionErr) return handleErr(req, res, connectionErr);
+      connection.beginTransaction((transactionErr) => {
+        if (transactionErr) {
+          connection.release();
+          return handleErr(req, res, transactionErr);
+        }
+        connection.query('INSERT INTO work_orders SET ?', dataPengajuan, (insertErr, result) => {
+          if (insertErr) {
+            return connection.rollback(() => {
+              connection.release();
+              handleErr(req, res, insertErr);
+            });
+          }
+          connection.query(
+            `INSERT INTO work_order_history
+            (work_order_id, actor_user_id, actor_name, actor_role, action, note)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+            [String(result.insertId), String(user.id), user.nama, user.role, 'submitted', null],
+            (historyErr) => {
+              if (historyErr) {
+                return connection.rollback(() => {
+                  connection.release();
+                  handleErr(req, res, historyErr);
+                });
+              }
+              connection.commit((commitErr) => {
+                if (commitErr) {
+                  return connection.rollback(() => {
+                    connection.release();
+                    handleErr(req, res, commitErr);
+                  });
+                }
+                connection.release();
+                req.session.flash = {
+                  type: 'success',
+                  message: `Work Order ${no_wo} berhasil diajukan!`,
+                };
+                res.redirect('/');
+              });
+            }
+          );
+        });
+      });
+    });
   }
-
-  let lampiranPath = null;
-  if (req.files && req.files.length > 0) {
-    const paths = req.files.map((file) => '/uploads/' + file.filename);
-    lampiranPath = paths.join(',');
-  }
-
-  // Basic server-side validation
-  const { no_wo, uraian_pekerjaan, lokasi, team } = req.body;
-  if (!no_wo || !uraian_pekerjaan || !lokasi || !team) {
-    req.session.flash = { type: 'error', message: 'Semua field wajib diisi.' };
-    return res.redirect('back');
-  }
-
-  const dataPengajuan = {
-    no_wo: no_wo.trim(),
-    uraian_pekerjaan: uraian_pekerjaan.trim(),
-    lokasi: lokasi.trim(),
-    lampiran: lampiranPath,
-    status: 'Submitted',
-    prepared_by: req.session.user.id,
-    team: team,
-    submitted_at: new Date(),
-  };
-
-  db.query('INSERT INTO work_orders SET ?', dataPengajuan, (err) => {
-    if (err) return handleErr(req, res, err);
-    req.session.flash = { type: 'success', message: `Work Order ${no_wo} berhasil diajukan!` };
-    res.redirect('/');
-  });
-});
+);
 
 // 4. HALAMAN DETAIL WO: Membuka form asli yang sudah terisi data untuk di-review/approve
 app.get('/view-wo/:id', (req, res) => {
   if (!req.session.user) return res.redirect('/login');
   const woId = req.params.id;
-  const teams = ['Team Sipil', 'Team Electric', 'Team Operation', 'Team Lainnya'];
 
   const sql = `
     SELECT wo.*,
@@ -402,65 +667,89 @@ app.get('/view-wo/:id', (req, res) => {
     if (results.length === 0) return res.status(404).send('Work Order tidak ditemukan.');
 
     const workOrder = results[0];
-    ['ttd_prepared', 'ttd_reviewed', 'ttd_approved', 'ttd_performed', 'ttd_verified', 'ttd_received']
-      .forEach((field) => { workOrder[field] = normalizePublicAssetPath(workOrder[field]); });
-
-    // Hitung step timeline
-    const steps = ['Submitted', 'Reviewed', 'Approved', 'Completed', 'Verified', 'Closed'];
-    const statusIdx = steps.indexOf(workOrder.status);
-
-    res.render('form-wo', {
-      user: req.session.user,
-      wo: workOrder,
-      teams,
-      autoNoWO: null,
-      flash: res.locals.flash,
-      rejectReason: workOrder.reject_reason || null,
-      formatRupiah,
-      timeline: { steps, currentIdx: statusIdx },
+    if (!canAccessWorkOrder(req.session.user, workOrder)) {
+      return res.status(403).send('Anda tidak memiliki akses ke Work Order ini.');
+    }
+    delete workOrder.biaya_manpower;
+    delete workOrder.biaya_material;
+    delete workOrder.biaya_lain;
+    delete workOrder.total_biaya;
+    [
+      'ttd_prepared',
+      'ttd_reviewed',
+      'ttd_approved',
+      'ttd_performed',
+      'ttd_verified',
+      'ttd_received',
+    ].forEach((field) => {
+      workOrder[field] = normalizePublicAssetPath(workOrder[field]);
     });
+
+    db.query(
+      'SELECT * FROM work_order_history WHERE work_order_id = ? ORDER BY created_at ASC, id ASC',
+      [String(workOrder.id)],
+      (historyErr, history) => {
+        if (historyErr) return handleErr(req, res, historyErr);
+
+        const steps = ['Submitted', 'Reviewed', 'Approved', 'Completed', 'Verified', 'Closed'];
+        const statusIdx = steps.indexOf(workOrder.status);
+
+        res.render('form-wo', {
+          user: req.session.user,
+          wo: workOrder,
+          teams: DEPARTMENTS,
+          autoNoWO: null,
+          flash: res.locals.flash,
+          rejectReason: workOrder.reject_reason || null,
+          formatRupiah,
+          timeline: { steps, currentIdx: statusIdx },
+          history,
+          canManage: ['Manager', 'Super Admin'].includes(req.session.user.role),
+          canDelete: req.session.user.role === 'Super Admin',
+          canEditSchedule: canEditSchedule(req.session.user, workOrder),
+          canSaveSchedule: isTeamTujuan(req.session.user, workOrder),
+        });
+      }
+    );
   });
 });
 
 // 5. PROSES AKSI: Menangani tombol Approval & Work Order Flow
-app.post('/action-wo/:id', upload.any(), (req, res) => {
-  if (!req.session.user) return res.redirect('/login');
-
+app.post('/action-wo/:id', requireLogin, handleUpload(upload.any()), (req, res) => {
   const woId = req.params.id;
-  const role = req.session.user.role;
-  const userId = req.session.user.id;
-  const userTeam = req.session.user.team;
+  const user = req.session.user;
+  const { role } = user;
+  const userId = user.id;
   const action = req.body.action;
 
-  // Take WO details first
-  const getWoSql = 'SELECT * FROM work_orders WHERE id = ?';
-  db.query(getWoSql, [woId], (err, woResults) => {
-    if (err) throw err;
-    if (woResults.length === 0) return res.send('Work Order tidak ditemukan.');
+  db.query('SELECT * FROM work_orders WHERE id = ?', [woId], (err, woResults) => {
+    if (err) return handleErr(req, res, err);
+    if (woResults.length === 0) return res.status(404).send('Work Order tidak ditemukan.');
 
     const wo = woResults[0];
+    if (!canAccessWorkOrder(user, wo)) {
+      return res.status(403).send('Anda tidak memiliki akses ke Work Order ini.');
+    }
     let updateData = {};
     let message = '';
+    let historyNote = '';
+    let expectedStatus = null;
+    let requireUnverified = false;
 
-    // =========================================================================
-    // ALUR APPROVAL LEMBAR PENGAJUAN:
-    // Submitted -> TAHAP 1 (Manager Approve) -> TAHAP 2 (Team Leader/SPV Approve) -> Approved
-    // =========================================================================
-
-    // TAHAP 1: MANAGER APPROVAL (Akses Global)
     if ((role === 'Manager' || role === 'Super Admin') && action === 'manager_approve') {
       if (wo.status !== 'Submitted') {
         req.session.flash = { type: 'error', message: 'WO sudah tidak dalam status Submitted.' };
         return res.redirect('/');
       }
+      historyNote = textInput(req.body.approval_note);
+      expectedStatus = 'Submitted';
       updateData = {
         status: 'Reviewed',
         approved_by: userId,
         approved_at: new Date(),
+        manager_approval_note: historyNote || null,
       };
-      message = 'Approve Tahap 1 (Shorebase Manager) berhasil! WO diteruskan ke Team Leader/Supervisor.';
-
-    // TAHAP 2: TEAM LEADER / SUPERVISOR APPROVAL (Dibatasi per Team)
+      message = 'Persetujuan Manager tersimpan dan diteruskan ke Supervisor/Team Leader.';
     } else if (
       (role === 'Supervisor' || role === 'Team Leader' || role === 'Super Admin') &&
       action === 'spv_approve'
@@ -469,77 +758,105 @@ app.post('/action-wo/:id', upload.any(), (req, res) => {
         req.session.flash = { type: 'error', message: 'WO harus status Reviewed terlebih dahulu.' };
         return res.redirect('/');
       }
-      if (role !== 'Super Admin' && wo.team && userTeam && wo.team !== userTeam) {
-        req.session.flash = { type: 'error', message: `Anda hanya bisa menyetujui WO untuk team ${userTeam}!` };
-        return res.redirect('/');
-      }
+      historyNote = textInput(req.body.approval_note);
+      expectedStatus = 'Reviewed';
       updateData = {
         status: 'Approved',
         reviewed_by: userId,
         reviewed_at: new Date(),
+        supervisor_approval_note: historyNote || null,
       };
-      message = 'Approve Tahap 2 (Team Leader/Supervisor) berhasil! Status WO resmi Approved.';
-
-    // AKSI PENYELESAIAN PEKERJAAN
+      message = 'Persetujuan Supervisor/Team Leader tersimpan.';
     } else if ((role === 'Pemohon' || role === 'Super Admin') && action === 'complete') {
-      if (wo.status !== 'Approved') {
+      if (
+        wo.status !== 'Approved' ||
+        (role === 'Pemohon' && String(wo.prepared_by) !== String(userId))
+      ) {
         req.session.flash = { type: 'error', message: 'WO harus status Approved terlebih dahulu.' };
         return res.redirect('/');
       }
-      const mp = Math.max(0, parseFloat(req.body.biaya_manpower || 0));
-      const mt = Math.max(0, parseFloat(req.body.biaya_material || 0));
-      const ll = Math.max(0, parseFloat(req.body.biaya_lain || 0));
+      expectedStatus = 'Approved';
       updateData = {
         status: 'Completed',
         performed_by: userId,
-        detail_pekerjaan: (req.body.detail_pekerjaan || '').trim(),
-        completion_status: (req.body.completion_status || '').trim(),
-        biaya_manpower: mp,
-        biaya_material: mt,
-        biaya_lain: ll,
-        total_biaya: mp + mt + ll,
+        detail_pekerjaan: textInput(req.body.detail_pekerjaan),
+        completion_status: textInput(req.body.completion_status),
         completed_at: new Date(),
       };
-      message = 'Pekerjaan telah diselesaikan! Menunggu verifikasi Team Leader.';
-
+      historyNote = textInput(req.body.completion_status);
+      message = 'Pekerjaan telah diselesaikan. Menunggu verifikasi Supervisor/Team Leader.';
     } else if (
       (role === 'Supervisor' || role === 'Team Leader' || role === 'Super Admin') &&
       action === 'verify'
     ) {
-      if (wo.status !== 'Completed') {
-        req.session.flash = { type: 'error', message: 'WO harus status Completed terlebih dahulu.' };
+      if (wo.status !== 'Completed' || wo.verified_by) {
+        req.session.flash = {
+          type: 'error',
+          message: 'WO harus status Completed terlebih dahulu.',
+        };
         return res.redirect('/');
       }
-      if (role !== 'Super Admin' && wo.team && userTeam && wo.team !== userTeam) {
-        req.session.flash = { type: 'error', message: `Anda hanya bisa memverifikasi WO untuk team ${userTeam}!` };
-        return res.redirect('/');
-      }
+      expectedStatus = 'Completed';
+      requireUnverified = true;
       updateData = {
         verified_by: userId,
         verified_at: new Date(),
       };
+      historyNote = textInput(req.body.approval_note);
       message = 'Hasil pekerjaan telah diverifikasi!';
-
     } else if ((role === 'Pemohon' || role === 'Super Admin') && action === 'close') {
-      if (wo.status !== 'Completed' || !wo.verified_by) {
-        req.session.flash = { type: 'error', message: 'WO harus diverifikasi terlebih dahulu sebelum Close.' };
+      if (
+        wo.status !== 'Completed' ||
+        !wo.verified_by ||
+        (role === 'Pemohon' && String(wo.prepared_by) !== String(userId))
+      ) {
+        req.session.flash = {
+          type: 'error',
+          message: 'WO harus diverifikasi terlebih dahulu sebelum Close.',
+        };
         return res.redirect('/');
       }
-      updateData = { status: 'Closed', received_by: userId, closed_at: new Date() };
+      expectedStatus = 'Completed';
+      const evidence = (req.files || []).find((file) => file.fieldname === 'evidence_file');
+      updateData = {
+        status: 'Closed',
+        received_by: userId,
+        closed_at: new Date(),
+        evidence: evidence ? '/uploads/' + evidence.filename : wo.evidence,
+      };
+      historyNote = textInput(req.body.close_note);
       message = 'Work Order Resmi DITUTUP (Closed). Terima kasih!';
     } else if (action === 'reject') {
-      const allowedReject = role === 'Manager' || role === 'Supervisor' || role === 'Team Leader' || role === 'Super Admin';
+      const allowedReject =
+        (role === 'Manager' && wo.status === 'Submitted') ||
+        ((role === 'Supervisor' || role === 'Team Leader') && wo.status === 'Reviewed') ||
+        (role === 'Super Admin' && ['Submitted', 'Reviewed'].includes(wo.status));
       if (!allowedReject) {
         req.session.flash = { type: 'error', message: 'Aksi ditolak.' };
         return res.redirect('/');
       }
+      historyNote = textInput(req.body.reject_reason, 500);
+      if (!historyNote) {
+        req.session.flash = { type: 'error', message: 'Alasan penolakan wajib diisi.' };
+        return res.redirect('/');
+      }
+      expectedStatus = wo.status;
       updateData = {
         status: 'Draft',
-        reject_reason: (req.body.reject_reason || '').trim().slice(0, 500),
+        reject_reason: historyNote,
       };
       message = 'Work Order ditolak dan dikembalikan ke Pemohon.';
-    } else if ((role === 'Pemohon' || role === 'Super Admin') && action === 'resubmit') {
-      let finalLampiran = req.body.old_lampiran || null;
+    } else if (
+      (role === 'Pemohon' || role === 'Super Admin') &&
+      action === 'resubmit' &&
+      (role === 'Super Admin' || String(wo.prepared_by) === String(userId)) &&
+      wo.status === 'Draft'
+    ) {
+      // Lampiran lama diambil dari data WO di database, BUKAN dari input klien.
+      // Kalau memakai req.body.old_lampiran, resubmit tanpa field itu akan menghapus
+      // referensi bukti/RAB sebelumnya (file jadi orphan) dan path lampiran bisa
+      // dipalsukan lewat request API ke file milik WO lain.
+      let finalLampiran = wo.lampiran;
       if (req.files && req.files.length > 0) {
         const lampiranFiles = req.files.filter((file) => file.fieldname === 'lampiran_file');
         if (lampiranFiles.length > 0) {
@@ -547,30 +864,221 @@ app.post('/action-wo/:id', upload.any(), (req, res) => {
           finalLampiran = paths.join(',');
         }
       }
+      expectedStatus = 'Draft';
       updateData = {
-        uraian_pekerjaan: (req.body.uraian_pekerjaan || wo.uraian_pekerjaan).trim(),
-        lokasi: (req.body.lokasi || wo.lokasi).trim(),
+        uraian_pekerjaan: textInput(req.body.uraian_pekerjaan || wo.uraian_pekerjaan),
+        lokasi: textInput(req.body.lokasi || wo.lokasi),
         lampiran: finalLampiran,
         status: 'Submitted',
-        team: req.body.team || wo.team,
+        team: role === 'Pemohon' ? user.team : wo.team,
+        // schedule_date & due_date TIDAK disentuh di sini: ini aksi Pemohon, dan jadwal
+        // pelaksanaan + tanggal jatuh tempo hanya boleh diisi oleh Team Tujuan
+        // (Supervisor/Team Leader) atau Manager/Super Admin. Nilai lama tetap dipertahankan.
+        material_request_note: textInput(req.body.material_request_note) || null,
         reject_reason: null,
         submitted_at: new Date(), // reset timestamp submit
-        reviewed_at: null, approved_at: null, reviewed_by: null, approved_by: null,
+        reviewed_at: null,
+        approved_at: null,
+        reviewed_by: null,
+        approved_by: null,
+        supervisor_approval_note: null,
+        manager_approval_note: null,
       };
+      historyNote = 'WO diajukan ulang.';
       message = 'Work Order berhasil diperbaiki dan diajukan ulang!';
+    } else if (action === 'update' && ['Manager', 'Super Admin'].includes(role)) {
+      const team = req.body.team;
+      if (!DEPARTMENTS.includes(team) && team !== wo.team) {
+        req.session.flash = { type: 'error', message: 'Departemen tujuan tidak valid.' };
+        return res.redirect('/');
+      }
+      updateData = {
+        no_wo: textInput(req.body.no_wo, 128),
+        uraian_pekerjaan: textInput(req.body.uraian_pekerjaan),
+        lokasi: textInput(req.body.lokasi),
+        team,
+        schedule_date: req.body.schedule_date || null,
+        due_date: req.body.due_date || null,
+        material_request_note: textInput(req.body.material_request_note) || null,
+      };
+      if (
+        !updateData.no_wo ||
+        !updateData.uraian_pekerjaan ||
+        !updateData.lokasi ||
+        !isValidDateRange(updateData.schedule_date, updateData.due_date)
+      ) {
+        req.session.flash = {
+          type: 'error',
+          message: 'Data WO tidak valid; periksa kelengkapan dan tanggal.',
+        };
+        return res.redirect('/');
+      }
+      historyNote = 'Data WO diperbarui oleh Manager/Super Admin.';
+      message = 'Perubahan Work Order berhasil disimpan.';
+    } else if (action === 'update_schedule' && isTeamTujuan(user, wo)) {
+      // Alur Jadwal Pelaksanaan & Tanggal Jatuh Tempo: hanya Team Tujuan (Supervisor/Team
+      // Leader dari departemen tujuan WO) atau Super Admin yang boleh mengisi/mengubah kedua
+      // tanggal ini. Pemohon tidak memiliki action ini sehingga tidak mungkin mencapai cabang ini.
+      if (wo.status === 'Closed') {
+        req.session.flash = {
+          type: 'error',
+          message: 'WO sudah Closed; jadwal pelaksanaan tidak dapat diubah lagi.',
+        };
+        return res.redirect('/');
+      }
+      if (!isValidDateRange(req.body.schedule_date, req.body.due_date)) {
+        req.session.flash = {
+          type: 'error',
+          message: 'Rentang jadwal dan jatuh tempo tidak valid.',
+        };
+        return res.redirect('/');
+      }
+      updateData = {
+        schedule_date: req.body.schedule_date || null,
+        due_date: req.body.due_date || null,
+      };
+      historyNote = 'Jadwal pelaksanaan dan tanggal jatuh tempo diperbarui oleh Team Tujuan.';
+      message = 'Jadwal pelaksanaan dan tanggal jatuh tempo berhasil disimpan.';
+    } else if (
+      action === 'update_mr_note' &&
+      ['Pemohon', 'Manager', 'Super Admin'].includes(role) &&
+      (role !== 'Pemohon' || String(wo.prepared_by) === String(userId))
+    ) {
+      updateData = {
+        material_request_note: textInput(req.body.material_request_note) || null,
+      };
+      historyNote = updateData.material_request_note || 'Catatan MR dihapus.';
+      message = 'Keterangan Material Request berhasil disimpan.';
     }
 
-    // Pastikan aksi valid (tidak empty updateData)
     if (Object.keys(updateData).length === 0) {
       req.session.flash = { type: 'warn', message: 'Tidak ada perubahan disimpan.' };
       return res.redirect('/');
     }
 
-    const sql = 'UPDATE work_orders SET ? WHERE id = ?';
-    db.query(sql, [updateData, woId], (err) => {
-      if (err) return handleErr(req, res, err);
-      req.session.flash = { type: 'success', message };
-      res.redirect('/');
+    let updateSql = 'UPDATE work_orders SET ? WHERE id = ?';
+    const updateParams = [updateData, woId];
+    if (expectedStatus) {
+      updateSql += ' AND status = ?';
+      updateParams.push(expectedStatus);
+    }
+    if (requireUnverified) updateSql += ' AND verified_by IS NULL';
+
+    db.getConnection((connectionErr, connection) => {
+      if (connectionErr) return handleErr(req, res, connectionErr);
+      connection.beginTransaction((transactionErr) => {
+        if (transactionErr) {
+          connection.release();
+          return handleErr(req, res, transactionErr);
+        }
+        connection.query(updateSql, updateParams, (updateErr, updateResult) => {
+          if (updateErr || (expectedStatus && updateResult.affectedRows === 0)) {
+            return connection.rollback(() => {
+              connection.release();
+              if (updateErr) return handleErr(req, res, updateErr);
+              req.session.flash = {
+                type: 'error',
+                message: 'Status WO baru saja berubah; muat ulang dan periksa kembali.',
+              };
+              res.redirect('/');
+            });
+          }
+          connection.query(
+            `INSERT INTO work_order_history
+              (work_order_id, actor_user_id, actor_name, actor_role, action, note)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [String(woId), String(user.id), user.nama, user.role, action, historyNote || null],
+            (historyErr) => {
+              if (historyErr) {
+                return connection.rollback(() => {
+                  connection.release();
+                  console.error('Gagal mencatat riwayat WO:', historyErr);
+                  req.session.flash = {
+                    type: 'error',
+                    message: 'Perubahan dibatalkan karena riwayat WO gagal dicatat.',
+                  };
+                  res.redirect('/');
+                });
+              }
+              connection.commit((commitErr) => {
+                if (commitErr) {
+                  return connection.rollback(() => {
+                    connection.release();
+                    handleErr(req, res, commitErr);
+                  });
+                }
+                connection.release();
+                req.session.flash = { type: 'success', message };
+                res.redirect('/');
+              });
+            }
+          );
+        });
+      });
+    });
+  });
+});
+
+app.post('/delete-wo/:id', (req, res) => {
+  if (!req.session.user) return res.redirect('/login');
+  if (req.session.user.role !== 'Super Admin') {
+    return res.status(403).send('Hanya Super Admin yang dapat menghapus WO.');
+  }
+  db.query('SELECT * FROM work_orders WHERE id = ?', [req.params.id], (err, results) => {
+    if (err) return handleErr(req, res, err);
+    if (!results.length) return res.status(404).send('Work Order tidak ditemukan.');
+    const wo = results[0];
+    db.getConnection((connectionErr, connection) => {
+      if (connectionErr) return handleErr(req, res, connectionErr);
+      connection.beginTransaction((transactionErr) => {
+        if (transactionErr) {
+          connection.release();
+          return handleErr(req, res, transactionErr);
+        }
+        connection.query(
+          `INSERT INTO work_order_history
+            (work_order_id, actor_user_id, actor_name, actor_role, action, note)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            String(wo.id),
+            String(req.session.user.id),
+            req.session.user.nama,
+            req.session.user.role,
+            'deleted',
+            `WO ${wo.no_wo} dihapus`,
+          ],
+          (historyErr) => {
+            if (historyErr) {
+              return connection.rollback(() => {
+                connection.release();
+                handleErr(req, res, historyErr);
+              });
+            }
+            connection.query('DELETE FROM work_orders WHERE id = ?', [wo.id], (deleteErr) => {
+              if (deleteErr) {
+                return connection.rollback(() => {
+                  connection.release();
+                  handleErr(req, res, deleteErr);
+                });
+              }
+              connection.commit((commitErr) => {
+                if (commitErr) {
+                  return connection.rollback(() => {
+                    connection.release();
+                    handleErr(req, res, commitErr);
+                  });
+                }
+                connection.release();
+                req.session.flash = {
+                  type: 'success',
+                  message: `Work Order ${wo.no_wo} berhasil dihapus; riwayat penghapusan tetap tersimpan.`,
+                };
+                res.redirect('/');
+              });
+            });
+          }
+        );
+      });
     });
   });
 });

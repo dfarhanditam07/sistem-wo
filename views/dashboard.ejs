@@ -100,7 +100,7 @@
         .stat-card.submitted { border-color: #ffc107; }
         .stat-card.approved { border-color: #198754; }
         .stat-card.completed { border-color: #0dcaf0; }
-        .stat-card.cost { border-color: #7c3aed; }
+        .stat-card.overdue { border-color: #dc2626; }
         .stat-sub {
             font-size: 12px;
             color: #888;
@@ -591,16 +591,16 @@
             <p class="stat-label">Selesai & Closed</p>
             <p class="stat-sub">Closed: <%= statsCounts.Closed || 0 %> · Completed: <%= statsCounts.Completed || 0 %></p>
         </div>
-        <div class="stat-card cost">
-            <div class="stat-icon"><iconify-icon icon="mdi:cash-multiple" style="color: #7c3aed;"></iconify-icon></div>
-            <p class="stat-value" style="font-size:23px;"><%= formatRupiah(grandTotalBiaya) %></p>
-            <p class="stat-label">Total Realisasi Biaya</p>
+        <div class="stat-card overdue">
+            <div class="stat-icon"><iconify-icon icon="mdi:calendar-alert" style="color: #dc2626;"></iconify-icon></div>
+            <p class="stat-value" style="font-size:23px;"><%= overdueCount %></p>
+            <p class="stat-label">WO Terlambat</p>
         </div>
     </div>
 
-    <!-- Team Progress Summary -->
+    <!-- Department Progress Summary -->
     <div class="team-grid">
-        <% validTeams.forEach(t => { const ts = teamStats[t] || { total: 0, pending: 0, done: 0 }; const pctPending = ts.total ? Math.round(ts.pending / ts.total * 100) : 0; const pctDone = ts.total ? Math.round(ts.done / ts.total * 100) : 0; %>
+        <% const reportTeams = [...validTeams, ...Object.keys(teamStats).filter(t => !validTeams.includes(t))]; reportTeams.forEach(t => { const ts = teamStats[t] || { total: 0, pending: 0, done: 0, overdue: 0 }; const pctPending = ts.total ? Math.round(ts.pending / ts.total * 100) : 0; const pctDone = ts.total ? Math.round(ts.done / ts.total * 100) : 0; %>
         <div class="team-card">
             <div class="team-card-title"><iconify-icon icon="mdi:account-group" style="color:#0f4c81;"></iconify-icon> <%= t %></div>
             <div class="team-bar">
@@ -611,6 +611,7 @@
                 <span>Total: <strong><%= ts.total %></strong></span>
                 <span style="color:#d97706;">Pending: <strong><%= ts.pending %></strong></span>
                 <span style="color:#059669;">Done: <strong><%= ts.done %></strong></span>
+                <span style="color:#dc2626;">Terlambat: <strong><%= ts.overdue %></strong></span>
             </div>
         </div>
         <% }) %>
@@ -633,7 +634,7 @@
                 <option value="Closed" <%= pagination.fStatus === 'Closed' ? 'selected' : '' %>>Closed</option>
             </select>
             <select class="filter-select" id="teamFilter">
-                <option value="all" <%= pagination.fTeam === 'all' ? 'selected' : '' %>>Semua Team</option>
+                <option value="all" <%= pagination.fTeam === 'all' ? 'selected' : '' %>>Semua Departemen/Area</option>
                 <% validTeams.forEach(t => { %>
                 <option value="<%= t %>" <%= pagination.fTeam === t ? 'selected' : '' %>><%= t %></option>
                 <% }) %>
@@ -643,9 +644,10 @@
                 <option value="id_asc" <%= pagination.sortBy === 'id_asc' ? 'selected' : '' %>>Terlama</option>
                 <option value="no_wo_asc" <%= pagination.sortBy === 'no_wo_asc' ? 'selected' : '' %>>No. WO (A-Z)</option>
                 <option value="no_wo_desc" <%= pagination.sortBy === 'no_wo_desc' ? 'selected' : '' %>>No. WO (Z-A)</option>
-                <option value="biaya_desc" <%= pagination.sortBy === 'biaya_desc' ? 'selected' : '' %>>Biaya Tertinggi</option>
             </select>
-            <% if (user.role === 'Pemohon') { %>
+            <% if (canCreate && user.role === 'Pemohon') { %>
+                <a class="btn btn-primary" href="/create-wo?team=<%= encodeURIComponent(user.team || '') %>">+ Buat WO Baru</a>
+            <% } else if (canCreate) { %>
                 <button id="openModalBtn" class="btn btn-primary">+ Buat WO Baru</button>
             <% } %>
         </div>
@@ -659,9 +661,9 @@
                         <th width="5%">No.</th>
                         <th width="10%">No. WO</th>
                         <th width="28%">Uraian Pekerjaan</th>
-                        <th width="9%">Team</th>
+                        <th width="9%">Departemen</th>
                         <th width="12%">Lokasi</th>
-                        <th width="10%">Biaya</th>
+                        <th width="10%">Schedule / Due Date</th>
                         <th width="11%">Pemohon</th>
                         <th width="8%">Status</th>
                         <th width="7%">Aksi</th>
@@ -677,7 +679,9 @@
                                     <a href="/?page=1" style="padding:10px 20px; background:#0f4c81; color:white; border-radius:10px; text-decoration:none; font-weight:600;">🗑️ Reset Filter</a>
                                 <% } else { %>
                                     Belum ada data Work Order yang masuk.<br><br>
-                                    <% if (user.role === 'Pemohon') { %>
+                                    <% if (canCreate && user.role === 'Pemohon') { %>
+                                    <a href="/create-wo?team=<%= encodeURIComponent(user.team || '') %>" class="btn btn-primary" style="padding:12px 26px; font-size:15px;">✨ Buat Work Order Pertama</a>
+                                    <% } else if (canCreate) { %>
                                     <button id="emptyCtaBtn" class="btn btn-primary" style="padding:12px 26px; font-size:15px;">✨ Buat Work Order Pertama</button>
                                     <% } %>
                                 <% } %>
@@ -704,13 +708,23 @@
                                     <% } %>
                                 </td>
                                 <td>📍 <%= wo.lokasi.length > 25 ? wo.lokasi.substring(0, 25) + '...' : wo.lokasi %></td>
-                                <td style="font-weight:600; color:#16a34a;"><%- wo.total_biaya > 0 ? formatRupiah(wo.total_biaya) : '<span style="color:#9ca3af;">-</span>' %></td>
+                                <td>
+                                    <div>Jadwal: <%= wo.schedule_date ? new Date(wo.schedule_date).toLocaleDateString('id-ID') : '-' %></div>
+                                    <div style="color:<%= wo.is_overdue ? '#dc2626' : '#64748b' %>;">
+                                        Jatuh tempo: <%= wo.due_date ? new Date(wo.due_date).toLocaleDateString('id-ID') : '-' %>
+                                    </div>
+                                </td>
                                 <td><%= wo.nama_pemohon || '-' %></td>
                                 <td>
                                     <span class="status-badge <%= wo.status %>"><%= wo.status %></span>
                                 </td>
                                 <td>
                                     <a href="/view-wo/<%= wo.id %>" class="btn btn-outline" style="padding:6px 10px; font-size:12px;">👁️ Lihat</a>
+                                    <% if (canDelete) { %>
+                                    <form action="/delete-wo/<%= wo.id %>" method="POST" style="display:inline;" onsubmit="return confirm('Hapus WO ini secara permanen? Riwayat penghapusan akan tetap tersimpan.');">
+                                        <button class="btn btn-outline" style="padding:6px 10px; font-size:12px; color:#dc2626;">Hapus</button>
+                                    </form>
+                                    <% } %>
                                 </td>
                             </tr>
                         <% }) %>
@@ -756,15 +770,15 @@
 </div>
 
 <!-- Team Selection Modal -->
+<% if (canCreate && user.role !== 'Pemohon') { %>
 <div id="teamModal" class="modal-overlay">
     <div class="modal">
-        <h3>Pilih Team Tujuan WO</h3>
+        <h3>Pilih Departemen/Area Tujuan WO</h3>
         <select id="teamSelect" class="modal-select">
-            <option value="">-- Pilih Team --</option>
-            <option value="Team Sipil">Team Sipil</option>
-            <option value="Team Electric">Team Electric</option>
-            <option value="Team Operation">Team Operation</option>
-            <option value="Team Lainnya">Team Lainnya</option>
+            <option value="">-- Pilih Departemen/Area --</option>
+            <% validTeams.forEach(department => { %>
+            <option value="<%= department %>"><%= department %></option>
+            <% }) %>
         </select>
         <div class="modal-buttons">
             <button id="cancelBtn" class="btn btn-cancel">Batal</button>
@@ -772,6 +786,7 @@
         </div>
     </div>
 </div>
+<% } %>
 
 <script>
     // Toast notification auto-dismiss + close handler
@@ -837,7 +852,7 @@
             // Use mini-toast instead of native alert
             const warn = document.createElement('div');
             warn.className = 'toast toast-warn'; warn.style.cssText='position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:99999;';
-            warn.innerHTML = '<iconify-icon icon="mdi:alert" width="20"></iconify-icon><span>Silakan pilih team terlebih dahulu!</span>';
+            warn.innerHTML = '<iconify-icon icon="mdi:alert" width="20"></iconify-icon><span>Silakan pilih departemen/area terlebih dahulu!</span>';
             document.body.appendChild(warn);
             setTimeout(()=>warn.remove(), 2500);
         }
