@@ -5,6 +5,11 @@ const mysql = require('mysql2');
 const path = require('path');
 const session = require('express-session');
 const multer = require('multer');
+const fs = require('fs');
+
+// Pastikan folder uploads selalu ada (Multer tidak auto-create direktori)
+const uploadDir = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 // ---------- UTILITY FUNCTIONS ----------
 function formatRupiah(angka) {
@@ -112,7 +117,7 @@ app.use((req, res, next) => {
 // Konfigurasi penyimpanan Multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, './public/uploads/'); // Simpan ke folder ini
+    cb(null, uploadDir); // Simpan ke folder ini
   },
   filename: (req, file, cb) => {
     // Ganti nama file agar unik (menghindari nama file yang sama)

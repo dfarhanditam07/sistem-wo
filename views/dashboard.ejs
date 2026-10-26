@@ -704,7 +704,7 @@
                                     <% } %>
                                 </td>
                                 <td>📍 <%= wo.lokasi.length > 25 ? wo.lokasi.substring(0, 25) + '...' : wo.lokasi %></td>
-                                <td style="font-weight:600; color:#16a34a;"><%= wo.total_biaya > 0 ? formatRupiah(wo.total_biaya) : '<span style="color:#9ca3af;">-</span>' %></td>
+                                <td style="font-weight:600; color:#16a34a;"><%- wo.total_biaya > 0 ? formatRupiah(wo.total_biaya) : '<span style="color:#9ca3af;">-</span>' %></td>
                                 <td><%= wo.nama_pemohon || '-' %></td>
                                 <td>
                                     <span class="status-badge <%= wo.status %>"><%= wo.status %></span>
