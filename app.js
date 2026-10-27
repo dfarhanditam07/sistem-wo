@@ -10,6 +10,7 @@ const crypto = require('crypto');
 const {
   DEPARTMENTS,
   STATUS_FLOW,
+  actionLabel,
   canAccessWorkOrder,
   canEditSchedule,
   isTeamTujuan,
@@ -73,11 +74,12 @@ const app = express();
 const PORT = process.env.PORT || 3005;
 
 // Daftarkan helper ke app.locals agar tersedia di semua view EJS.
-// statusLabel/STATUS_FLOW ikut didaftarkan global supaya partial shell
-// (sidebar) dan seluruh halaman memakai istilah status yang sama.
+// statusLabel/STATUS_FLOW ikut didaftarkan global supaya seluruh halaman
+// memakai istilah status yang sama.
 app.locals.formatRupiah = formatRupiah;
 app.locals.dateInputValue = dateInputValue;
 app.locals.statusLabel = statusLabel;
+app.locals.actionLabel = actionLabel;
 app.locals.statusFlow = STATUS_FLOW;
 
 function normalizePublicAssetPath(filePath) {
@@ -137,23 +139,15 @@ app.use(
 );
 
 // Flash message middleware (simpan pesan untuk 1 redirect).
-// Sekaligus menyiapkan locals shell (navigasi sidebar/topbar) supaya seluruh
-// halaman memakai penanda menu aktif yang konsisten tanpa perlu dihitung ulang
-// di setiap res.render().
+// Sekaligus menyiapkan locals bersama (pengguna & hak buat WO) supaya seluruh
+// halaman memakai penanda yang konsisten tanpa perlu dihitung ulang di setiap
+// res.render().
 app.use((req, res, next) => {
   res.locals.flash = req.session.flash || null;
   delete req.session.flash;
 
   const user = req.session.user || null;
   res.locals.currentUser = user;
-  res.locals.currentStatus = req.query.status || 'all';
-  res.locals.activeNav = req.path.startsWith('/create-wo')
-    ? 'create'
-    : req.path.startsWith('/view-wo')
-      ? 'detail'
-      : req.path === '/'
-        ? 'dashboard'
-        : '';
   res.locals.canCreate = Boolean(user) && ['Pemohon', 'Manager', 'Super Admin'].includes(user.role);
   next();
 });
@@ -523,20 +517,32 @@ app.get('/create-wo', (req, res) => {
   }
 
   const requestedTeam = req.query.team;
-  const selectedTeam = DEPARTMENTS.includes(requestedTeam)
-    ? requestedTeam
-    : user.role === 'Pemohon'
-      ? user.team
-      : null;
-  if (!selectedTeam || !DEPARTMENTS.includes(selectedTeam)) {
+  const teamIsValid = DEPARTMENTS.includes(requestedTeam);
+  const isPemohon = user.role === 'Pemohon';
+  const selectedTeam = teamIsValid ? requestedTeam : isPemohon ? user.team : null;
+  if (isPemohon && (!selectedTeam || !DEPARTMENTS.includes(selectedTeam))) {
     req.session.flash = {
       type: 'warn',
-      message:
-        user.role === 'Pemohon'
-          ? 'Akun Anda belum ditetapkan ke departemen.'
-          : 'Pilih departemen tujuan WO.',
+      message: 'Akun Anda belum ditetapkan ke departemen.',
     };
     return res.redirect('/');
+  }
+
+  // Manager/Super Admin yang membuka halaman ini tanpa ?team=... (mis. lewat menu
+  // sidebar) belum punya departemen tujuan, sehingga nomor WO belum bisa dibuat.
+  // Form tetap ditampilkan dengan dropdown departemen kosong; memilih departemen
+  // akan memuat ulang halaman dengan ?team=... dan nomor WO dibuat saat itu.
+  if (!selectedTeam) {
+    return res.render('form-wo', {
+      user: req.session.user,
+      wo: null,
+      teams: DEPARTMENTS,
+      selectedTeam: null,
+      autoNoWO: null,
+      flash: res.locals.flash,
+      rejectReason: null,
+      canEditSchedule: false,
+    });
   }
 
   const teamCode = selectedTeam
@@ -605,7 +611,7 @@ app.post(
     }
 
     const dataPengajuan = {
-      no_wo: no_wo.trim(),
+      no_wo: textInput(no_wo, 50),
       uraian_pekerjaan: uraian_pekerjaan.trim(),
       lokasi: lokasi.trim(),
       lampiran: lampiranPath,
@@ -913,6 +919,14 @@ app.post('/action-wo/:id', requireLogin, handleUpload(upload.any()), (req, res) 
       updateData = {
         status: 'Draft',
         reject_reason: historyNote,
+        // Tanda tangan & catatan persetujuan sebelumnya dibatalkan karena WO
+        // kembali ke Draft dan harus disetujui ulang dari awal.
+        reviewed_by: null,
+        reviewed_at: null,
+        approved_by: null,
+        approved_at: null,
+        manager_approval_note: null,
+        supervisor_approval_note: null,
       };
       message = 'Work Order ditolak dan dikembalikan ke Pemohon.';
     } else if (
@@ -965,7 +979,7 @@ app.post('/action-wo/:id', requireLogin, handleUpload(upload.any()), (req, res) 
         return res.redirect('/');
       }
       updateData = {
-        no_wo: textInput(req.body.no_wo, 128),
+        no_wo: textInput(req.body.no_wo, 50),
         uraian_pekerjaan: textInput(req.body.uraian_pekerjaan),
         lokasi: textInput(req.body.lokasi),
         team,

@@ -19,6 +19,35 @@ function quoteEnumValue(value) {
   return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "''")}'`;
 }
 
+// Label tim lama ('HW'/'JGC') diganti ke nama resmi MOM ('HW (Area)'/'JGC (Area)').
+// Idempoten: hanya baris yang masih memakai label lama yang disentuh, sehingga
+// skrip aman dijalankan berulang tanpa mengubah data yang sudah dinormalkan.
+const LEGACY_TEAM_MAPPING = [
+  ['HW', 'HW (Area)'],
+  ['JGC', 'JGC (Area)'],
+];
+const TEAM_LABEL_COLUMNS = [
+  ['users', 'team'],
+  ['users', 'departemen'],
+  ['work_orders', 'team'],
+];
+
+async function mapLegacyTeamLabels(connection) {
+  for (const [legacy, current] of LEGACY_TEAM_MAPPING) {
+    for (const [table, column] of TEAM_LABEL_COLUMNS) {
+      const [result] = await connection.query(
+        `UPDATE \`${table}\` SET \`${column}\` = ? WHERE \`${column}\` = ?`,
+        [current, legacy]
+      );
+      if (result.affectedRows > 0) {
+        console.log(
+          `Label ${legacy} -> ${current} diterapkan pada ${table}.${column} (${result.affectedRows} baris).`
+        );
+      }
+    }
+  }
+}
+
 function readEnumValues(columnType) {
   const match = /^enum\((.*)\)$/i.exec(columnType || '');
   if (!match) return null;
@@ -135,6 +164,10 @@ async function migrate() {
     // Tahap 'Verified' (SPV/TL memeriksa hasil pekerjaan) butuh nilai enum baru.
     // 'In Progress' sudah ada di skema sejak awal dan kini benar-benar dipakai.
     await appendEnumValues(connection, process.env.DB_NAME, 'work_orders', 'status', ['Verified']);
+
+    // Setelah nilai enum memuat nama area resmi, normalkan baris lama yang masih
+    // memakai label 'HW'/'JGC' agar cocok dengan daftar departemen aplikasi.
+    await mapLegacyTeamLabels(connection);
 
     const workOrderColumns = [
       ['schedule_date', 'DATE NULL'],

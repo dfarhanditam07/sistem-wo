@@ -1,8 +1,6 @@
 <%- include('partials/head', { pageTitle: wo ? 'Detail Work Order' : 'Buat Work Order' }) %>
 
 <div class="app-shell">
-  <%- include('partials/sidebar') %>
-
   <div class="app-main">
     <%- include('partials/topbar', {
       pageTitle: wo ? 'Detail Work Order' : 'Buat Work Order Baru',
@@ -31,7 +29,7 @@
           <% history.forEach(event => { %>
           <li class="history-item">
             <div>
-              <span class="history-action"><%= event.action %></span> — <%= event.actor_name %> (<%= event.actor_role %>)
+              <span class="history-action"><%= actionLabel(event.action) %></span> — <%= event.actor_name %> (<%= event.actor_role %>)
               · <span class="history-time"><%= new Date(event.created_at).toLocaleString('id-ID') %></span>
             </div>
             <% if (event.note) { %><div class="history-note"><%= event.note %></div><% } %>

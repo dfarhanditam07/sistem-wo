@@ -1,6 +1,6 @@
 <%#
-  Skrip bersama untuk seluruh halaman: navigasi mobile, toast, dan loading
-  overlay. Ditaruh di satu tempat supaya perilaku shell konsisten.
+  Skrip bersama untuk seluruh halaman: toast dan loading overlay. Ditaruh di
+  satu tempat supaya perilaku shell konsisten.
 %>
 <script>
   function showLoading() {
@@ -20,18 +20,6 @@
       setTimeout(() => toast.remove(), 300);
     }
   }
-
-  function openNav() {
-    document.body.classList.add('nav-open');
-  }
-
-  function closeNav() {
-    document.body.classList.remove('nav-open');
-  }
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeNav();
-  });
 
   <% if (typeof flash !== 'undefined' && flash) { %>
   setTimeout(closeToast, 4500);

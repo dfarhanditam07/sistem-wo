@@ -1,12 +1,8 @@
 <%#
-  Topbar halaman: tombol menu (mobile), judul halaman, identitas pengguna,
-  dan aksi logout. Menerima pageTitle & pageSubtitle dari halaman pemanggil.
+  Topbar halaman: judul halaman, identitas pengguna, dan aksi logout.
+  Menerima pageTitle & pageSubtitle dari halaman pemanggil.
 %>
 <header class="app-topbar">
-  <button class="topbar-toggle" type="button" onclick="openNav()" aria-label="Buka menu navigasi">
-    <iconify-icon icon="mdi:menu"></iconify-icon>
-  </button>
-
   <div class="topbar-heading">
     <h1><%= typeof pageTitle !== 'undefined' && pageTitle ? pageTitle : 'Work Order' %></h1>
     <% if (typeof pageSubtitle !== 'undefined' && pageSubtitle) { %>
