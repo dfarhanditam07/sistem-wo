@@ -2,11 +2,14 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   DEPARTMENTS,
+  STATUS_FLOW,
+  STATUS_LABELS,
   canAccessWorkOrder,
   canEditSchedule,
   isTeamTujuan,
   isValidDate,
   isValidDateRange,
+  statusLabel,
   textInput,
   workOrderScope,
 } = require('../lib/work-order');
@@ -123,4 +126,30 @@ test('unassigned supervisors cannot claim a work order schedule', () => {
   assert.equal(isTeamTujuan({ role: 'Supervisor', team: 'Civil' }, { team: null }), false);
   assert.equal(canEditSchedule({ role: 'Pemohon' }, null), false);
   assert.equal(canEditSchedule(null, { team: 'Civil' }), false);
+});
+
+test('status flow lists the eight stages in order and each stage has a label', () => {
+  assert.deepEqual(STATUS_FLOW, [
+    'Draft',
+    'Submitted',
+    'Reviewed',
+    'Approved',
+    'In Progress',
+    'Completed',
+    'Verified',
+    'Closed',
+  ]);
+  assert.deepEqual(Object.keys(STATUS_LABELS).sort(), [...STATUS_FLOW].sort());
+});
+
+test('status labels translate the confusing enum values by their real actor', () => {
+  assert.equal(statusLabel('Reviewed'), 'Disetujui Manager');
+  assert.equal(statusLabel('Approved'), 'Disetujui SPV/TL');
+  assert.equal(statusLabel('In Progress'), 'Dikerjakan');
+  assert.equal(statusLabel('Verified'), 'Diverifikasi');
+  assert.equal(statusLabel('Submitted'), 'Diajukan');
+});
+
+test('unknown status falls back to the raw value so old data still renders', () => {
+  assert.equal(statusLabel('Legacy'), 'Legacy');
 });

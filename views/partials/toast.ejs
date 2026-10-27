@@ -1,0 +1,12 @@
+<%# Notifikasi mengambang dari flash message (1x tampil setelah redirect). %>
+<% if (typeof flash !== 'undefined' && flash) { %>
+<div class="toast-container" id="toastContainer">
+  <div class="toast toast-<%= flash.type %>" id="flashToast" role="status">
+    <iconify-icon
+      icon="<%= flash.type === 'success' ? 'mdi:check-circle-outline' : flash.type === 'error' ? 'mdi:alert-circle-outline' : flash.type === 'warn' ? 'mdi:alert-outline' : 'mdi:information-outline' %>">
+    </iconify-icon>
+    <span><%= flash.message %></span>
+    <button class="toast-close" type="button" onclick="closeToast()" aria-label="Tutup">&times;</button>
+  </div>
+</div>
+<% } %>

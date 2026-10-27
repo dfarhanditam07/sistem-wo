@@ -1,863 +1,369 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Work Order</title>
-    <link rel="icon" type="image/png" href="/images/favicon.png">
-    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-    <style>
-        * {
-            box-sizing: border-box;
-        }
+<%- include('partials/head', { pageTitle: 'Dashboard' }) %>
 
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
-            margin: 0; 
-            color: #333;
-            min-height: 100vh;
-        }
+<div class="app-shell">
+  <%- include('partials/sidebar') %>
 
-        /* Navbar */
-        .navbar {
-            background: linear-gradient(135deg, #0f4c81 0%, #1a6bb5 100%);
-            color: white;
-            padding: 18px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 20px rgba(15, 76, 129, 0.3);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
+  <div class="app-main">
+    <%- include('partials/topbar', {
+      pageTitle: 'Dashboard',
+      pageSubtitle: 'Ringkasan dan daftar Work Order'
+    }) %>
 
-        .navbar-brand {
-            font-size: 24px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            letter-spacing: 0.5px;
-        }
+    <main class="app-content">
+      <%- include('partials/toast') %>
 
-        .navbar-user {
-            font-size: 15px;
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .navbar-user span {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .user-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 16px;
-        }
-
-        /* Container */
-        .container { 
-            max-width: 1280px; 
-            margin: 30px auto; 
-            padding: 0 20px; 
-        }
-
-        /* Statistics Cards */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: white;
-            border-radius: 14px;
-            padding: 24px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-            transition: all 0.3s ease;
-            border-left: 4px solid;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
-        }
-
-        .stat-card.total { border-color: #0f4c81; }
-        .stat-card.submitted { border-color: #ffc107; }
-        .stat-card.approved { border-color: #198754; }
-        .stat-card.completed { border-color: #0dcaf0; }
-        .stat-card.overdue { border-color: #dc2626; }
-        .stat-sub {
-            font-size: 12px;
-            color: #888;
-            margin-top: 2px;
-            font-weight: 500;
-        }
-
-        .stat-icon {
-            font-size: 32px;
-            margin-bottom: 8px;
-        }
-
-        .stat-value {
-            font-size: 32px;
-            font-weight: 700;
-            color: #2c3e50;
-            margin: 0;
-        }
-
-        .stat-label {
-            font-size: 14px;
-            color: #666;
-            margin: 4px 0 0 0;
-            font-weight: 500;
-        }
-
-        /* Page Header */
-        .page-header {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-            gap: 16px;
-        }
-
-        .page-header h3 {
-            margin: 0;
-            color: #2c3e50;
-            font-size: 24px;
-            font-weight: 700;
-        }
-
-        /* Controls (Search + Filter) */
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .search-box {
-            position: relative;
-        }
-
-        .search-box input {
-            padding: 10px 16px 10px 40px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 14px;
-            width: 240px;
-            transition: all 0.3s ease;
-        }
-
-        .search-box input:focus {
-            outline: none;
-            border-color: #0f4c81;
-            box-shadow: 0 0 0 3px rgba(15, 76, 129, 0.1);
-        }
-
-        .search-icon {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #aaa;
-        }
-
-        .filter-select {
-            padding: 10px 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 14px;
-            background: white;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .filter-select:focus {
-            outline: none;
-            border-color: #0f4c81;
-        }
-
-        /* Card */
-        .card {
-            background: white; 
-            border-radius: 16px; 
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06); 
-            overflow: hidden;
-        }
-
-        /* Buttons */
-        .btn { 
-            padding: 10px 20px; 
-            border: none; 
-            border-radius: 10px; 
-            cursor: pointer; 
-            text-decoration: none; 
-            font-weight: 600; 
-            font-size: 14px; 
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-primary { 
-            background: linear-gradient(135deg, #0f4c81 0%, #1a6bb5 100%);
-            color: white; 
-            box-shadow: 0 4px 12px rgba(15, 76, 129, 0.3);
-        }
-        .btn-primary:hover { 
-            transform: translateY(-2px); 
-            box-shadow: 0 6px 20px rgba(15, 76, 129, 0.4);
-        }
-
-        .btn-outline {
-            background: transparent;
-            color: #0f4c81;
-            border: 2px solid #0f4c81;
-            padding: 8px 16px;
-            font-size: 13px;
-        }
-        .btn-outline:hover { 
-            background: #0f4c81; 
-            color: white; 
-            transform: translateY(-1px);
-        }
-
-        .btn-danger { 
-            background: rgba(255, 255, 255, 0.15); 
-            color: white; 
-            border: 1px solid rgba(255, 255, 255, 0.4); 
-            padding: 8px 16px; 
-            border-radius: 10px;
-        }
-        .btn-danger:hover { 
-            background: #dc3545; 
-            border-color: #dc3545; 
-        }
-
-        /* Table */
-        .table-wrapper {
-            overflow-x: auto;
-        }
-
-        table { 
-            width: 100%; 
-            border-collapse: collapse; 
-        }
-        
-        th, td { 
-            padding: 18px 24px; 
-            text-align: left; 
-        }
-
-        th { 
-            background: linear-gradient(to bottom, #f8f9fc, #f1f3f9); 
-            color: #495057;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.7px;
-            font-weight: 700;
-            border-bottom: 2px solid #e9ecef;
-        }
-
-        td {
-            border-bottom: 1px solid #f0f0f0;
-            color: #495057;
-        }
-
-        tr:last-child td { border-bottom: none; }
-        tr:hover { 
-            background-color: #f8f9fa; 
-        }
-
-        /* Status Badges */
-        .status-badge { 
-            padding: 7px 14px; 
-            border-radius: 50px; 
-            font-size: 12px; 
-            font-weight: 700; 
-            display: inline-block; 
-            letter-spacing: 0.3px;
-        }
-        
-        .Draft { background: #e2e3e5; color: #383d41; }
-        .Submitted { background: #fff3cd; color: #856404; }
-        .Reviewed { background: #cce5ff; color: #004085; }
-        .Approved { background: #d4edda; color: #155724; }
-        .Completed { background: #d1ecf1; color: #0c5460; }
-        .Closed { background: linear-gradient(135deg, #198754 0%, #157347 100%); color: white; }
-
-        .empty-state { 
-            text-align: center; 
-            padding: 60px 20px !important; 
-            color: #888; 
-            font-style: italic; 
-            font-size: 16px;
-        }
-
-        .empty-state-icon {
-            font-size: 64px;
-            margin-bottom: 16px;
-            display: block;
-        }
-
-        /* ---------- Toast Notification ---------- */
-        .toast-container {
-            position: fixed;
-            top: 90px;
-            right: 30px;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .toast {
-            min-width: 280px;
-            max-width: 420px;
-            padding: 14px 18px 14px 14px;
-            border-radius: 12px;
-            color: white;
-            font-weight: 600;
-            font-size: 14px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            animation: toastIn .35s cubic-bezier(.2,.9,.3,1.2);
-            border-left: 5px solid rgba(255,255,255,0.4);
-        }
-        .toast-success { background: linear-gradient(135deg,#198754,#146c43); }
-        .toast-error { background: linear-gradient(135deg,#dc3545,#b02a37); }
-        .toast-warn { background: linear-gradient(135deg,#fd7e14,#d9680c); }
-        .toast-info { background: linear-gradient(135deg,#0f4c81,#0b3c66); }
-        .toast-close {
-            margin-left: auto;
-            background: rgba(255,255,255,0.18);
-            border: none;
-            color: white;
-            width: 22px; height: 22px;
-            border-radius: 50%;
-            font-size: 13px;
-            cursor: pointer;
-            line-height: 22px;
-        }
-        @keyframes toastIn { from { opacity:0; transform: translateX(60px);} to { opacity:1; transform: translateX(0);} }
-        .toast.fade-out { animation: toastOut .3s ease forwards; }
-        @keyframes toastOut { to { opacity:0; transform: translateX(60px);} }
-
-        /* ---------- Team Summary Cards ---------- */
-        .team-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 16px;
-            margin-bottom: 28px;
-        }
-        .team-card {
-            background: white;
-            border-radius: 12px;
-            padding: 18px 20px;
-            box-shadow: 0 3px 12px rgba(0,0,0,0.05);
-            border-top: 4px solid #0f4c81;
-        }
-        .team-card-title {
-            font-weight: 700;
-            color: #2c3e50;
-            font-size: 14px;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .team-bar {
-            display: flex;
-            height: 10px;
-            border-radius: 999px;
-            overflow: hidden;
-            background: #f1f3f9;
-            margin-bottom: 10px;
-        }
-        .team-bar-fill { height: 100%; transition: width .4s ease; }
-        .team-meta {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            color: #666;
-        }
-        .team-meta strong { color: #2c3e50; }
-
-        /* ---------- Pagination ---------- */
-        .pagination-wrap {
-            padding: 18px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-            background: #f8f9fc;
-            border-top: 1px solid #ecedf3;
-        }
-        .pagination-info { font-size: 13px; color: #666; }
-        .pagination-info strong { color: #0f4c81; }
-        .pagination-buttons { display: flex; gap: 6px; }
-        .page-btn {
-            padding: 7px 13px;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            background: white;
-            color: #495057;
-            font-size: 13px;
-            cursor: pointer;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all .2s ease;
-        }
-        .page-btn:hover:not(:disabled) { background: #0f4c81; color: white; border-color: #0f4c81; }
-        .page-btn.active { background: #0f4c81; color: white; border-color: #0f4c81; }
-        .page-btn:disabled { opacity: .4; cursor: not-allowed; }
-
-        /* Loading overlay */
-        .loading-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(255,255,255,0.6);
-            backdrop-filter: blur(2px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-        }
-        .loading-spinner {
-            width: 52px; height: 52px;
-            border: 5px solid #e0e7ff;
-            border-top-color: #0f4c81;
-            border-radius: 50%;
-            animation: spin 0.9s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Modal */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 999;
-        }
-
-        .modal {
-            background: white;
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-            width: 90%;
-            max-width: 400px;
-        }
-
-        .modal h3 {
-            margin: 0 0 20px 0;
-            color: #2c3e50;
-        }
-
-        .modal-select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
-            margin-bottom: 20px;
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-        }
-
-        .btn-cancel {
-            background: #e9ecef;
-            color: #495057;
-        }
-
-        .btn-cancel:hover {
-            background: #dee2e6;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .navbar {
-                padding: 14px 20px;
-            }
-
-            .navbar-brand {
-                font-size: 18px;
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .search-box input {
-                width: 100%;
-            }
-
-            th, td {
-                padding: 12px 16px;
-                font-size: 14px;
-            }
-        }
-    </style>
-</head>
-<body>
-
-<nav class="navbar">
-    <div class="navbar-brand">
-        <img src="/images/favicon.png" alt="Logo" width="30" height="30" />
-        WORK - ORDER
-    </div>
-    <div class="navbar-user">
-        <span>
-            <div class="user-avatar"><%= user.nama.charAt(0).toUpperCase() %></div>
-            <div>
-                <strong><%= user.nama %></strong><br>
-                <small style="opacity: 0.8;"><%= user.role %></small>
-            </div>
-        </span>
-        <a href="/logout" class="btn btn-danger">Logout</a>
-    </div>
-</nav>
-
-<div class="container">
-    
-    <!-- Notification Toast -->
-    <% if (flash) { %>
-    <div class="toast-container">
-        <div class="toast toast-<%= flash.type === 'warn' ? 'warn' : flash.type %>" id="flashToast">
-            <% if (flash.type === 'success') { %><iconify-icon icon="mdi:check-circle-outline" width="20" height="20"></iconify-icon>
-            <% } else if (flash.type === 'error') { %><iconify-icon icon="mdi:alert-circle-outline" width="20" height="20"></iconify-icon>
-            <% } else if (flash.type === 'warn') { %><iconify-icon icon="mdi:alert-outline" width="20" height="20"></iconify-icon>
-            <% } else { %><iconify-icon icon="mdi:information-outline" width="20" height="20"></iconify-icon> <% } %>
-            <span><%= flash.message %></span>
-            <button class="toast-close" onclick="closeToast()">×</button>
-        </div>
-    </div>
-    <% } %>
-
-    <!-- Statistics Cards -->
-    <div class="stats-grid">
+      <!-- ===== Ringkasan statistik ===== -->
+      <div class="stats-grid">
         <div class="stat-card total">
-            <div class="stat-icon"><iconify-icon icon="mdi:file-document-multiple" style="color: #0f4c81;"></iconify-icon></div>
-            <p class="stat-value"><%= pagination.totalItems %></p>
-            <p class="stat-label">Total Work Order</p>
-            <% if (pagination.search || pagination.fStatus !== 'all' || pagination.fTeam !== 'all') { %>
-            <p class="stat-sub">Terfilter dari seluruh data</p>
-            <% } %>
+          <iconify-icon class="stat-icon" style="color: var(--primary);" icon="mdi:file-document-multiple-outline"></iconify-icon>
+          <p class="stat-value"><%= pagination.totalItems %></p>
+          <p class="stat-label">Total Work Order</p>
+          <p class="stat-sub">
+            <%= (pagination.search || pagination.fStatus !== 'all' || pagination.fTeam !== 'all')
+              ? 'Terfilter dari seluruh data'
+              : 'Seluruh data Work Order' %>
+          </p>
         </div>
-        <div class="stat-card submitted">
-            <div class="stat-icon"><iconify-icon icon="mdi:clock-check-outline" style="color: #ffc107;"></iconify-icon></div>
-            <p class="stat-value"><%= (statsCounts.Submitted || 0) + (statsCounts.Reviewed || 0) + (statsCounts.Draft || 0) %></p>
-            <p class="stat-label">Menunggu Persetujuan</p>
-            <p class="stat-sub">Draft: <%= statsCounts.Draft || 0 %> · Submitted: <%= statsCounts.Submitted || 0 %> · Reviewed: <%= statsCounts.Reviewed || 0 %></p>
-        </div>
-        <div class="stat-card approved">
-            <div class="stat-icon"><iconify-icon icon="mdi:check-decagram" style="color: #198754;"></iconify-icon></div>
-            <p class="stat-value"><%= statsCounts.Approved || 0 %></p>
-            <p class="stat-label">Disetujui (On Progress)</p>
-        </div>
-        <div class="stat-card completed">
-            <div class="stat-icon"><iconify-icon icon="mdi:check-circle-outline" style="color: #0dcaf0;"></iconify-icon></div>
-            <p class="stat-value"><%= (statsCounts.Completed || 0) + (statsCounts.Closed || 0) %></p>
-            <p class="stat-label">Selesai & Closed</p>
-            <p class="stat-sub">Closed: <%= statsCounts.Closed || 0 %> · Completed: <%= statsCounts.Completed || 0 %></p>
-        </div>
-        <div class="stat-card overdue">
-            <div class="stat-icon"><iconify-icon icon="mdi:calendar-alert" style="color: #dc2626;"></iconify-icon></div>
-            <p class="stat-value" style="font-size:23px;"><%= overdueCount %></p>
-            <p class="stat-label">WO Terlambat</p>
-        </div>
-    </div>
 
-    <!-- Department Progress Summary -->
-    <div class="team-grid">
-        <% const reportTeams = [...validTeams, ...Object.keys(teamStats).filter(t => !validTeams.includes(t))]; reportTeams.forEach(t => { const ts = teamStats[t] || { total: 0, pending: 0, done: 0, overdue: 0 }; const pctPending = ts.total ? Math.round(ts.pending / ts.total * 100) : 0; const pctDone = ts.total ? Math.round(ts.done / ts.total * 100) : 0; %>
+        <div class="stat-card submitted">
+          <iconify-icon class="stat-icon" style="color: var(--warning);" icon="mdi:clock-check-outline"></iconify-icon>
+          <p class="stat-value"><%= (statsCounts.Submitted || 0) + (statsCounts.Reviewed || 0) + (statsCounts.Draft || 0) %></p>
+          <p class="stat-label">Menunggu Persetujuan</p>
+          <p class="stat-sub">
+            <%= statusLabel('Draft') %>: <%= statsCounts.Draft || 0 %> ·
+            <%= statusLabel('Submitted') %>: <%= statsCounts.Submitted || 0 %> ·
+            <%= statusLabel('Reviewed') %>: <%= statsCounts.Reviewed || 0 %>
+          </p>
+        </div>
+
+        <div class="stat-card approved">
+          <iconify-icon class="stat-icon" style="color: var(--success);" icon="mdi:check-decagram-outline"></iconify-icon>
+          <p class="stat-value"><%= (statsCounts.Approved || 0) + (statsCounts['In Progress'] || 0) %></p>
+          <p class="stat-label">Disetujui / Dikerjakan</p>
+          <p class="stat-sub">
+            <%= statusLabel('Approved') %>: <%= statsCounts.Approved || 0 %> ·
+            <%= statusLabel('In Progress') %>: <%= statsCounts['In Progress'] || 0 %>
+          </p>
+        </div>
+
+        <div class="stat-card completed">
+          <iconify-icon class="stat-icon" style="color: var(--info);" icon="mdi:check-circle-outline"></iconify-icon>
+          <p class="stat-value"><%= (statsCounts.Completed || 0) + (statsCounts.Verified || 0) + (statsCounts.Closed || 0) %></p>
+          <p class="stat-label">Selesai / Diverifikasi / Closed</p>
+          <p class="stat-sub">
+            <%= statusLabel('Completed') %>: <%= statsCounts.Completed || 0 %> ·
+            <%= statusLabel('Verified') %>: <%= statsCounts.Verified || 0 %> ·
+            <%= statusLabel('Closed') %>: <%= statsCounts.Closed || 0 %>
+          </p>
+        </div>
+
+        <div class="stat-card overdue">
+          <iconify-icon class="stat-icon" style="color: var(--danger);" icon="mdi:calendar-alert"></iconify-icon>
+          <p class="stat-value"><%= overdueCount %></p>
+          <p class="stat-label">WO Terlambat</p>
+          <p class="stat-sub">Melewati tanggal jatuh tempo</p>
+        </div>
+      </div>
+
+      <!-- ===== Progres per departemen ===== -->
+      <div class="page-header">
+        <div>
+          <h2>Progres Departemen</h2>
+          <div class="page-desc">Perbandingan Work Order selesai vs masih berjalan per departemen/area.</div>
+        </div>
+      </div>
+
+      <div class="team-grid">
+        <% const reportTeams = [...validTeams, ...Object.keys(teamStats).filter(t => !validTeams.includes(t))];
+           reportTeams.forEach(t => {
+             const ts = teamStats[t] || { total: 0, pending: 0, done: 0, overdue: 0 };
+             const pctPending = ts.total ? Math.round(ts.pending / ts.total * 100) : 0;
+             const pctDone = ts.total ? Math.round(ts.done / ts.total * 100) : 0; %>
         <div class="team-card">
-            <div class="team-card-title"><iconify-icon icon="mdi:account-group" style="color:#0f4c81;"></iconify-icon> <%= t %></div>
-            <div class="team-bar">
-                <div class="team-bar-fill" style="width:<%= pctPending %>%; background: linear-gradient(90deg,#ffc107,#fd7e14);" title="Pending"></div>
-                <div class="team-bar-fill" style="width:<%= pctDone %>%; background: linear-gradient(90deg,#198754,#0dcaf0);" title="Selesai"></div>
-            </div>
-            <div class="team-meta">
-                <span>Total: <strong><%= ts.total %></strong></span>
-                <span style="color:#d97706;">Pending: <strong><%= ts.pending %></strong></span>
-                <span style="color:#059669;">Done: <strong><%= ts.done %></strong></span>
-                <span style="color:#dc2626;">Terlambat: <strong><%= ts.overdue %></strong></span>
-            </div>
+          <div class="team-card-title">
+            <iconify-icon icon="mdi:account-group-outline" style="color: var(--primary);"></iconify-icon>
+            <%= t %>
+          </div>
+          <div class="team-bar">
+            <div class="team-bar-fill" style="width:<%= pctPending %>%; background: linear-gradient(90deg, var(--warning), #fb923c);" title="Pending"></div>
+            <div class="team-bar-fill" style="width:<%= pctDone %>%; background: linear-gradient(90deg, var(--success), var(--info));" title="Selesai"></div>
+          </div>
+          <div class="team-meta">
+            <span>Total: <strong><%= ts.total %></strong></span>
+            <span style="color: var(--warning);">Pending: <strong><%= ts.pending %></strong></span>
+            <span style="color: var(--success);">Done: <strong><%= ts.done %></strong></span>
+            <span style="color: var(--danger);">Terlambat: <strong><%= ts.overdue %></strong></span>
+          </div>
         </div>
         <% }) %>
-    </div>
+      </div>
 
-    <div class="page-header">
-        <h3>Daftar Work Order</h3>
-        <div class="controls">
-            <div class="search-box">
-                <span class="search-icon"><iconify-icon icon="mdi:magnify" style="color: #aaa;"></iconify-icon></span>
-                <input type="text" id="searchInput" placeholder="Cari NO. WO / Uraian..." value="<%= pagination.search %>">
-            </div>
-            <select class="filter-select" id="statusFilter">
-                <option value="all" <%= pagination.fStatus === 'all' ? 'selected' : '' %>>Semua Status</option>
-                <option value="Draft" <%= pagination.fStatus === 'Draft' ? 'selected' : '' %>>Draft</option>
-                <option value="Submitted" <%= pagination.fStatus === 'Submitted' ? 'selected' : '' %>>Submitted</option>
-                <option value="Reviewed" <%= pagination.fStatus === 'Reviewed' ? 'selected' : '' %>>Reviewed</option>
-                <option value="Approved" <%= pagination.fStatus === 'Approved' ? 'selected' : '' %>>Approved</option>
-                <option value="Completed" <%= pagination.fStatus === 'Completed' ? 'selected' : '' %>>Completed</option>
-                <option value="Closed" <%= pagination.fStatus === 'Closed' ? 'selected' : '' %>>Closed</option>
-            </select>
-            <select class="filter-select" id="teamFilter">
-                <option value="all" <%= pagination.fTeam === 'all' ? 'selected' : '' %>>Semua Departemen/Area</option>
-                <% validTeams.forEach(t => { %>
-                <option value="<%= t %>" <%= pagination.fTeam === t ? 'selected' : '' %>><%= t %></option>
-                <% }) %>
-            </select>
-            <select class="filter-select" id="sortBySelect">
-                <option value="id_desc" <%= pagination.sortBy === 'id_desc' ? 'selected' : '' %>>Terbaru</option>
-                <option value="id_asc" <%= pagination.sortBy === 'id_asc' ? 'selected' : '' %>>Terlama</option>
-                <option value="no_wo_asc" <%= pagination.sortBy === 'no_wo_asc' ? 'selected' : '' %>>No. WO (A-Z)</option>
-                <option value="no_wo_desc" <%= pagination.sortBy === 'no_wo_desc' ? 'selected' : '' %>>No. WO (Z-A)</option>
-            </select>
-            <% if (canCreate && user.role === 'Pemohon') { %>
-                <a class="btn btn-primary" href="/create-wo?team=<%= encodeURIComponent(user.team || '') %>">+ Buat WO Baru</a>
-            <% } else if (canCreate) { %>
-                <button id="openModalBtn" class="btn btn-primary">+ Buat WO Baru</button>
-            <% } %>
+      <!-- ===== Daftar Work Order ===== -->
+      <div class="page-header">
+        <div>
+          <h2>Daftar Work Order</h2>
+          <div class="page-desc">Gunakan pencarian dan filter untuk menemukan WO tertentu.</div>
         </div>
-    </div>
 
-    <div class="card">
+        <div class="page-toolbar">
+          <div class="search-box">
+            <span class="search-icon"><iconify-icon icon="mdi:magnify"></iconify-icon></span>
+            <input type="search" id="searchInput" placeholder="Cari No. WO / Uraian..." value="<%= pagination.search %>">
+          </div>
+
+          <select class="filter-select" id="statusFilter" aria-label="Filter status">
+            <option value="all" <%= pagination.fStatus === 'all' ? 'selected' : '' %>>Semua Status</option>
+            <% statusFlow.forEach(s => { %>
+            <option value="<%= s %>" <%= pagination.fStatus === s ? 'selected' : '' %>><%= statusLabel(s) %></option>
+            <% }) %>
+          </select>
+
+          <select class="filter-select" id="teamFilter" aria-label="Filter departemen">
+            <option value="all" <%= pagination.fTeam === 'all' ? 'selected' : '' %>>Semua Departemen/Area</option>
+            <% validTeams.forEach(t => { %>
+            <option value="<%= t %>" <%= pagination.fTeam === t ? 'selected' : '' %>><%= t %></option>
+            <% }) %>
+          </select>
+
+          <select class="filter-select" id="sortBySelect" aria-label="Urutkan">
+            <option value="id_desc" <%= pagination.sortBy === 'id_desc' ? 'selected' : '' %>>Terbaru</option>
+            <option value="id_asc" <%= pagination.sortBy === 'id_asc' ? 'selected' : '' %>>Terlama</option>
+            <option value="no_wo_asc" <%= pagination.sortBy === 'no_wo_asc' ? 'selected' : '' %>>No. WO (A-Z)</option>
+            <option value="no_wo_desc" <%= pagination.sortBy === 'no_wo_desc' ? 'selected' : '' %>>No. WO (Z-A)</option>
+          </select>
+
+          <% if (canCreate && user.role === 'Pemohon') { %>
+          <a class="btn btn-primary" href="/create-wo?team=<%= encodeURIComponent(user.team || '') %>">
+            <iconify-icon icon="mdi:plus"></iconify-icon> Buat WO Baru
+          </a>
+          <% } else if (canCreate) { %>
+          <button type="button" id="openModalBtn" class="btn btn-primary">
+            <iconify-icon icon="mdi:plus"></iconify-icon> Buat WO Baru
+          </button>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="table-card">
         <div class="table-wrapper">
-            <table id="woTable">
-                <thead>
-                    <tr>
-                        <th width="5%">No.</th>
-                        <th width="10%">No. WO</th>
-                        <th width="28%">Uraian Pekerjaan</th>
-                        <th width="9%">Departemen</th>
-                        <th width="12%">Lokasi</th>
-                        <th width="10%">Schedule / Due Date</th>
-                        <th width="11%">Pemohon</th>
-                        <th width="8%">Status</th>
-                        <th width="7%">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                    <% if (workOrders.length === 0) { %>
-                        <tr>
-                            <td colspan="9" class="empty-state">
-                                <span class="empty-state-icon"><iconify-icon icon="mdi:inbox-outline" width="72" height="72" style="color:#cbd5e1;"></iconify-icon></span>
-                                <% if (pagination.search || pagination.fStatus !== 'all' || pagination.fTeam !== 'all') { %>
-                                    Tidak ada Work Order yang cocok dengan filter.<br><br>
-                                    <a href="/?page=1" style="padding:10px 20px; background:#0f4c81; color:white; border-radius:10px; text-decoration:none; font-weight:600;">🗑️ Reset Filter</a>
-                                <% } else { %>
-                                    Belum ada data Work Order yang masuk.<br><br>
-                                    <% if (canCreate && user.role === 'Pemohon') { %>
-                                    <a href="/create-wo?team=<%= encodeURIComponent(user.team || '') %>" class="btn btn-primary" style="padding:12px 26px; font-size:15px;">✨ Buat Work Order Pertama</a>
-                                    <% } else if (canCreate) { %>
-                                    <button id="emptyCtaBtn" class="btn btn-primary" style="padding:12px 26px; font-size:15px;">✨ Buat Work Order Pertama</button>
-                                    <% } %>
-                                <% } %>
-                            </td>
-                        </tr>
+          <table class="data-table" id="woTable">
+            <thead>
+              <tr>
+                <th>No.</th>
+                <th>No. WO</th>
+                <th>Uraian Pekerjaan</th>
+                <th>Departemen</th>
+                <th>Lokasi</th>
+                <th>Jadwal / Jatuh Tempo</th>
+                <th>Pemohon</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <% if (workOrders.length === 0) { %>
+              <tr>
+                <td colspan="9">
+                  <div class="empty-state">
+                    <iconify-icon class="empty-state-icon" icon="mdi:inbox-outline" width="64" height="64"></iconify-icon>
+                    <% if (pagination.search || pagination.fStatus !== 'all' || pagination.fTeam !== 'all') { %>
+                    <h3>Tidak ada WO yang cocok</h3>
+                    Tidak ada Work Order yang sesuai dengan filter yang dipilih.<br><br>
+                    <a href="/?page=1" class="btn btn-outline">
+                      <iconify-icon icon="mdi:filter-remove-outline"></iconify-icon> Reset Filter
+                    </a>
                     <% } else { %>
-                        <% workOrders.forEach((wo, i) => { %>
-                            <tr class="wo-row">
-                                <td><%= (pagination.page - 1) * pagination.perPage + i + 1 %>.</td>
-                                <td><strong style="color: #0f4c81;"><%= wo.no_wo %></strong></td>
-                                <td>
-                                    <div style="max-width:340px; line-height:1.5;"><%= wo.uraian_pekerjaan.length > 80 ? wo.uraian_pekerjaan.substring(0, 80) + '...' : wo.uraian_pekerjaan %></div>
-                                    <% if (wo.reject_reason) { %>
-                                        <div style="margin-top:6px; background:#fef2f2; color:#991b1b; padding:6px 10px; border-radius:6px; font-size:12px; border-left:3px solid #ef4444;">
-                                            <strong>⚠️ Ditolak:</strong> <%= wo.reject_reason %>
-                                        </div>
-                                    <% } %>
-                                </td>
-                                <td>
-                                    <% if (wo.team) { %>
-                                    <span style="font-size:12px; padding:3px 10px; background:#e0edff; color:#0f4c81; border-radius:20px; font-weight:600;"><%= wo.team %></span>
-                                    <% } else { %>
-                                    -
-                                    <% } %>
-                                </td>
-                                <td>📍 <%= wo.lokasi.length > 25 ? wo.lokasi.substring(0, 25) + '...' : wo.lokasi %></td>
-                                <td>
-                                    <div>Jadwal: <%= wo.schedule_date ? new Date(wo.schedule_date).toLocaleDateString('id-ID') : '-' %></div>
-                                    <div style="color:<%= wo.is_overdue ? '#dc2626' : '#64748b' %>;">
-                                        Jatuh tempo: <%= wo.due_date ? new Date(wo.due_date).toLocaleDateString('id-ID') : '-' %>
-                                    </div>
-                                </td>
-                                <td><%= wo.nama_pemohon || '-' %></td>
-                                <td>
-                                    <span class="status-badge <%= wo.status %>"><%= wo.status %></span>
-                                </td>
-                                <td>
-                                    <a href="/view-wo/<%= wo.id %>" class="btn btn-outline" style="padding:6px 10px; font-size:12px;">👁️ Lihat</a>
-                                    <% if (canDelete) { %>
-                                    <form action="/delete-wo/<%= wo.id %>" method="POST" style="display:inline;" onsubmit="return confirm('Hapus WO ini secara permanen? Riwayat penghapusan akan tetap tersimpan.');">
-                                        <button class="btn btn-outline" style="padding:6px 10px; font-size:12px; color:#dc2626;">Hapus</button>
-                                    </form>
-                                    <% } %>
-                                </td>
-                            </tr>
-                        <% }) %>
+                    <h3>Belum ada data Work Order</h3>
+                    Belum ada Work Order yang masuk.<br><br>
+                    <% if (canCreate && user.role === 'Pemohon') { %>
+                    <a href="/create-wo?team=<%= encodeURIComponent(user.team || '') %>" class="btn btn-primary">
+                      <iconify-icon icon="mdi:plus"></iconify-icon> Buat Work Order Pertama
+                    </a>
+                    <% } else if (canCreate) { %>
+                    <button type="button" id="emptyCtaBtn" class="btn btn-primary">
+                      <iconify-icon icon="mdi:plus"></iconify-icon> Buat Work Order Pertama
+                    </button>
                     <% } %>
-                </tbody>
-            </table>
+                    <% } %>
+                  </div>
+                </td>
+              </tr>
+              <% } else { %>
+              <% workOrders.forEach((wo, i) => { %>
+              <tr class="wo-row">
+                <td class="dim"><%= (pagination.page - 1) * pagination.perPage + i + 1 %></td>
+                <td class="cell-link nowrap"><%= wo.no_wo %></td>
+                <td>
+                  <div class="cell-title" style="max-width:340px;">
+                    <%= wo.uraian_pekerjaan.length > 80 ? wo.uraian_pekerjaan.substring(0, 80) + '...' : wo.uraian_pekerjaan %>
+                  </div>
+                  <% if (wo.reject_reason) { %>
+                  <div class="reject-banner" style="margin:6px 0 0; padding:6px 10px; font-size:var(--fs-xs);">
+                    <span><strong>Ditolak:</strong> <%= wo.reject_reason %></span>
+                  </div>
+                  <% } %>
+                </td>
+                <td>
+                  <% if (wo.team) { %>
+                  <span class="chip"><iconify-icon icon="mdi:domain"></iconify-icon> <%= wo.team %></span>
+                  <% } else { %>
+                  <span class="dim">-</span>
+                  <% } %>
+                </td>
+                <td><span class="dim"><iconify-icon icon="mdi:map-marker-outline"></iconify-icon></span>
+                  <%= wo.lokasi.length > 25 ? wo.lokasi.substring(0, 25) + '...' : wo.lokasi %></td>
+                <td class="nowrap">
+                  <div class="dim">Jadwal: <%= wo.schedule_date ? new Date(wo.schedule_date).toLocaleDateString('id-ID') : '-' %></div>
+                  <div style="color:<%= wo.is_overdue ? 'var(--danger)' : 'var(--text-muted)' %>;">
+                    Jatuh tempo: <%= wo.due_date ? new Date(wo.due_date).toLocaleDateString('id-ID') : '-' %>
+                  </div>
+                </td>
+                <td><%= wo.nama_pemohon || '-' %></td>
+                <td><span class="status-badge <%= wo.status %>"><%= statusLabel(wo.status) %></span></td>
+                <td class="nowrap">
+                  <a href="/view-wo/<%= wo.id %>" class="btn btn-outline btn-sm">
+                    <iconify-icon icon="mdi:eye-outline"></iconify-icon> Lihat
+                  </a>
+                  <% if (canDelete) { %>
+                  <form action="/delete-wo/<%= wo.id %>" method="POST" style="display:inline;"
+                    onsubmit="return confirm('Hapus WO ini secara permanen? Riwayat penghapusan akan tetap tersimpan.');">
+                    <button class="btn btn-danger btn-sm" type="submit">
+                      <iconify-icon icon="mdi:trash-can-outline"></iconify-icon>
+                    </button>
+                  </form>
+                  <% } %>
+                </td>
+              </tr>
+              <% }) %>
+              <% } %>
+            </tbody>
+          </table>
         </div>
+
         <% if (workOrders.length > 0 || pagination.totalPages > 1) { %>
         <div class="pagination-wrap">
-            <div class="pagination-info">
-                Menampilkan <strong><%= workOrders.length === 0 ? 0 : (pagination.page - 1) * pagination.perPage + 1 %> - <%= Math.min(pagination.page * pagination.perPage, pagination.totalItems) %></strong> dari <strong><%= pagination.totalItems %></strong> Work Order
-            </div>
-            <div class="pagination-buttons">
-                <% 
-                   const baseParams = new URLSearchParams();
-                   if (pagination.fStatus !== 'all') baseParams.set('status', pagination.fStatus);
-                   if (pagination.fTeam !== 'all') baseParams.set('team', pagination.fTeam);
-                   if (pagination.sortBy !== 'id_desc') baseParams.set('sortBy', pagination.sortBy);
-                   if (pagination.search) baseParams.set('q', pagination.search);
-                   const baseQ = baseParams.toString() ? '&' + baseParams.toString() : '';
-                %>
-                <a class="page-btn" href="/?page=1<%= baseQ %>" <% if (!pagination.hasPrev) { %>disabled style="pointer-events:none;"<% } %>>« First</a>
-                <a class="page-btn" href="/?page=<%= pagination.page - 1 %><%= baseQ %>" <% if (!pagination.hasPrev) { %>disabled style="pointer-events:none;"<% } %>>‹ Prev</a>
-                <% 
-                   let startP = Math.max(1, pagination.page - 2);
-                   let endP = Math.min(pagination.totalPages, pagination.page + 2);
-                   if (startP > 1) { %><span class="page-btn" style="border:none; background:none; cursor:default;">...</span><% }
-                   for (let p = startP; p <= endP; p++) { %>
-                <a class="page-btn <%= p === pagination.page ? 'active' : '' %>" href="/?page=<%= p %><%= baseQ %>"><%= p %></a>
-                <% } if (endP < pagination.totalPages) { %><span class="page-btn" style="border:none; background:none; cursor:default;">...</span><% } %>
-                <a class="page-btn" href="/?page=<%= pagination.page + 1 %><%= baseQ %>" <% if (!pagination.hasNext) { %>disabled style="pointer-events:none;"<% } %>>Next ›</a>
-                <a class="page-btn" href="/?page=<%= pagination.totalPages %><%= baseQ %>" <% if (!pagination.hasNext) { %>disabled style="pointer-events:none;"<% } %>>Last »</a>
-            </div>
+          <div class="pagination-info">
+            Menampilkan
+            <strong><%= workOrders.length === 0 ? 0 : (pagination.page - 1) * pagination.perPage + 1 %> -
+              <%= Math.min(pagination.page * pagination.perPage, pagination.totalItems) %></strong>
+            dari <strong><%= pagination.totalItems %></strong> Work Order
+          </div>
+          <div class="pagination-buttons">
+            <%
+               const baseParams = new URLSearchParams();
+               if (pagination.fStatus !== 'all') baseParams.set('status', pagination.fStatus);
+               if (pagination.fTeam !== 'all') baseParams.set('team', pagination.fTeam);
+               if (pagination.sortBy !== 'id_desc') baseParams.set('sortBy', pagination.sortBy);
+               if (pagination.search) baseParams.set('q', pagination.search);
+               const baseQ = baseParams.toString() ? '&' + baseParams.toString() : '';
+            %>
+            <a class="page-btn <%= pagination.hasPrev ? '' : 'is-disabled' %>" href="/?page=1<%= baseQ %>">&laquo; First</a>
+            <a class="page-btn <%= pagination.hasPrev ? '' : 'is-disabled' %>" href="/?page=<%= pagination.page - 1 %><%= baseQ %>">&lsaquo; Prev</a>
+            <%
+               let startP = Math.max(1, pagination.page - 2);
+               let endP = Math.min(pagination.totalPages, pagination.page + 2);
+               if (startP > 1) { %><span class="page-btn is-plain">...</span><% }
+               for (let p = startP; p <= endP; p++) { %>
+            <a class="page-btn <%= p === pagination.page ? 'active' : '' %>" href="/?page=<%= p %><%= baseQ %>"><%= p %></a>
+            <% } if (endP < pagination.totalPages) { %><span class="page-btn is-plain">...</span><% } %>
+            <a class="page-btn <%= pagination.hasNext ? '' : 'is-disabled' %>" href="/?page=<%= pagination.page + 1 %><%= baseQ %>">Next &rsaquo;</a>
+            <a class="page-btn <%= pagination.hasNext ? '' : 'is-disabled' %>" href="/?page=<%= pagination.totalPages %><%= baseQ %>">Last &raquo;</a>
+          </div>
         </div>
         <% } %>
-    </div>
-
+      </div>
+    </main>
+  </div>
 </div>
 
-<!-- Loading Overlay -->
-<div class="loading-overlay" id="loadingOverlay">
-    <div class="loading-spinner"></div>
-</div>
+<%- include('partials/loading') %>
 
-<!-- Team Selection Modal -->
+<!-- Modal pilih departemen tujuan saat membuat WO -->
 <% if (canCreate && user.role !== 'Pemohon') { %>
 <div id="teamModal" class="modal-overlay">
-    <div class="modal">
-        <h3>Pilih Departemen/Area Tujuan WO</h3>
-        <select id="teamSelect" class="modal-select">
-            <option value="">-- Pilih Departemen/Area --</option>
-            <% validTeams.forEach(department => { %>
-            <option value="<%= department %>"><%= department %></option>
-            <% }) %>
-        </select>
-        <div class="modal-buttons">
-            <button id="cancelBtn" class="btn btn-cancel">Batal</button>
-            <button id="confirmBtn" class="btn btn-primary">Buat WO</button>
-        </div>
+  <div class="modal">
+    <div class="modal-header">
+      <iconify-icon icon="mdi:domain-plus" width="22" height="22"></iconify-icon>
+      <strong>Pilih Departemen/Area Tujuan</strong>
     </div>
+    <div class="modal-body">
+      <label class="form-label" for="teamSelect" style="display:block; margin-bottom:6px;">Departemen/Area</label>
+      <select id="teamSelect" class="modal-select">
+        <option value="">-- Pilih Departemen/Area --</option>
+        <% validTeams.forEach(department => { %>
+        <option value="<%= department %>"><%= department %></option>
+        <% }) %>
+      </select>
+      <div class="modal-hint">Nomor WO akan dibuat otomatis sesuai departemen yang dipilih.</div>
+    </div>
+    <div class="modal-footer">
+      <button id="cancelBtn" class="btn-cancel" type="button">Batal</button>
+      <button id="confirmBtn" class="btn btn-primary" type="button">Buat WO</button>
+    </div>
+  </div>
 </div>
 <% } %>
 
+<%- include('partials/shell-scripts') %>
+
 <script>
-    // Toast notification auto-dismiss + close handler
-    let toastTimer;
-    function closeToast() {
-        const t = document.getElementById('flashToast');
-        if (t) { t.classList.add('fade-out'); setTimeout(()=>t.remove(), 300); }
+  // ====== Pencarian, filter, dan urutan (server-side) ======
+  const searchInput = document.getElementById('searchInput');
+  const statusFilter = document.getElementById('statusFilter');
+  const teamFilter = document.getElementById('teamFilter');
+  const sortBySelect = document.getElementById('sortBySelect');
+
+  function refreshWithFilters() {
+    showLoading();
+    const params = new URLSearchParams();
+    params.set('page', '1');
+    if (statusFilter && statusFilter.value !== 'all') params.set('status', statusFilter.value);
+    if (teamFilter && teamFilter.value !== 'all') params.set('team', teamFilter.value);
+    if (sortBySelect && sortBySelect.value !== 'id_desc') params.set('sortBy', sortBySelect.value);
+    if (searchInput && searchInput.value.trim()) params.set('q', searchInput.value.trim());
+    window.location.href = '/?' + params.toString();
+  }
+
+  searchInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') refreshWithFilters(); });
+  statusFilter?.addEventListener('change', refreshWithFilters);
+  teamFilter?.addEventListener('change', refreshWithFilters);
+  sortBySelect?.addEventListener('change', refreshWithFilters);
+
+  // ====== Modal pemilihan departemen tujuan ======
+  const openModalBtn = document.getElementById('openModalBtn');
+  const emptyCtaBtn = document.getElementById('emptyCtaBtn');
+  const teamModal = document.getElementById('teamModal');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const confirmBtn = document.getElementById('confirmBtn');
+  const teamSelect = document.getElementById('teamSelect');
+
+  function openTeamModal() {
+    if (!teamModal) return;
+    teamModal.classList.add('show');
+    teamSelect.value = '';
+  }
+
+  openModalBtn?.addEventListener('click', openTeamModal);
+  emptyCtaBtn?.addEventListener('click', openTeamModal);
+  cancelBtn?.addEventListener('click', () => teamModal.classList.remove('show'));
+  teamModal?.addEventListener('click', (e) => { if (e.target === teamModal) teamModal.classList.remove('show'); });
+
+  confirmBtn?.addEventListener('click', () => {
+    const selectedTeam = teamSelect.value;
+    if (selectedTeam) {
+      showLoading();
+      window.location.href = '/create-wo?team=' + encodeURIComponent(selectedTeam);
+    } else {
+      const warn = document.createElement('div');
+      warn.className = 'toast toast-warn';
+      warn.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:99999;';
+      warn.innerHTML = '<iconify-icon icon="mdi:alert"></iconify-icon><span>Silakan pilih departemen/area terlebih dahulu!</span>';
+      document.body.appendChild(warn);
+      setTimeout(() => warn.remove(), 2500);
     }
-    <% if (flash) { %>
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(closeToast, 4500);
-    <% } %>
-
-    function showLoading() { document.getElementById('loadingOverlay').style.display = 'flex'; }
-
-    // Server-side Search + Filter + Sort
-    const searchInput = document.getElementById('searchInput');
-    const statusFilter = document.getElementById('statusFilter');
-    const teamFilter = document.getElementById('teamFilter');
-    const sortBySelect = document.getElementById('sortBySelect');
-    let searchTimer;
-
-    function refreshWithFilters() {
-        showLoading();
-        const params = new URLSearchParams();
-        params.set('page', '1');
-        if (statusFilter.value !== 'all') params.set('status', statusFilter.value);
-        if (teamFilter.value !== 'all') params.set('team', teamFilter.value);
-        if (sortBySelect.value !== 'id_desc') params.set('sortBy', sortBySelect.value);
-        if (searchInput.value.trim()) params.set('q', searchInput.value.trim());
-        window.location.href = '/?' + params.toString();
-    }
-
-    searchInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') refreshWithFilters(); });
-    statusFilter?.addEventListener('change', refreshWithFilters);
-    teamFilter?.addEventListener('change', refreshWithFilters);
-    sortBySelect?.addEventListener('change', refreshWithFilters);
-
-    // Modal Logic (Team Selection for Create WO)
-    const openModalBtn = document.getElementById('openModalBtn');
-    const emptyCtaBtn = document.getElementById('emptyCtaBtn');
-    const teamModal = document.getElementById('teamModal');
-    const cancelBtn = document.getElementById('cancelBtn');
-    const confirmBtn = document.getElementById('confirmBtn');
-    const teamSelect = document.getElementById('teamSelect');
-
-    function openTeamModal() {
-        teamModal.style.display = 'flex';
-        teamSelect.value = '';
-    }
-    openModalBtn?.addEventListener('click', openTeamModal);
-    emptyCtaBtn?.addEventListener('click', openTeamModal);
-
-    cancelBtn?.addEventListener('click', () => { teamModal.style.display = 'none'; });
-    teamModal?.addEventListener('click', (e) => { if (e.target === teamModal) teamModal.style.display = 'none'; });
-
-    confirmBtn?.addEventListener('click', () => {
-        const selectedTeam = teamSelect.value;
-        if (selectedTeam) {
-            showLoading();
-            window.location.href = '/create-wo?team=' + encodeURIComponent(selectedTeam);
-        } else {
-            // Use mini-toast instead of native alert
-            const warn = document.createElement('div');
-            warn.className = 'toast toast-warn'; warn.style.cssText='position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:99999;';
-            warn.innerHTML = '<iconify-icon icon="mdi:alert" width="20"></iconify-icon><span>Silakan pilih departemen/area terlebih dahulu!</span>';
-            document.body.appendChild(warn);
-            setTimeout(()=>warn.remove(), 2500);
-        }
-    });
+  });
 </script>
 
 </body>
+
 </html>

@@ -32,6 +32,18 @@ function readEnumValues(columnType) {
   return values;
 }
 
+// MariaDB mengembalikan COLUMN_DEFAULT untuk ENUM dalam bentuk yang sudah dikutip
+// ('Draft'), sedangkan MySQL mengembalikan tanpa kutip (Draft). Tanpa dilepas,
+// nilai default akan terkirim ganda kutip ('''Draft''') dan ALTER TABLE gagal
+// dengan "Invalid default value".
+function readEnumDefault(value) {
+  if (value === null || value === undefined) return null;
+  const text = String(value);
+  return /^'.*'$/s.test(text)
+    ? text.slice(1, -1).replace(/''/g, "'").replace(/\\(.)/g, '$1')
+    : text;
+}
+
 async function appendEnumValues(connection, database, table, column, values) {
   const [columns] = await connection.execute(
     `SELECT COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT, CHARACTER_SET_NAME,
@@ -60,10 +72,8 @@ async function appendEnumValues(connection, database, table, column, values) {
     ? ` COLLATE ${definition.COLLATION_NAME}`
     : '';
   const nullable = definition.IS_NULLABLE === 'YES' ? ' NULL' : ' NOT NULL';
-  const defaultValue =
-    definition.COLUMN_DEFAULT === null
-      ? ''
-      : ` DEFAULT ${quoteEnumValue(String(definition.COLUMN_DEFAULT))}`;
+  const defaultChoice = readEnumDefault(definition.COLUMN_DEFAULT);
+  const defaultValue = defaultChoice === null ? '' : ` DEFAULT ${quoteEnumValue(defaultChoice)}`;
   const comment = definition.COLUMN_COMMENT
     ? ` COMMENT ${quoteEnumValue(definition.COLUMN_COMMENT)}`
     : '';
@@ -109,10 +119,8 @@ async function migrate() {
         ? ` COLLATE ${roleColumn.COLLATION_NAME}`
         : '';
       const nullable = roleColumn.IS_NULLABLE === 'YES' ? ' NULL' : ' NOT NULL';
-      const defaultValue =
-        roleColumn.COLUMN_DEFAULT === null
-          ? ''
-          : ` DEFAULT ${quoteEnumValue(String(roleColumn.COLUMN_DEFAULT))}`;
+      const roleDefault = readEnumDefault(roleColumn.COLUMN_DEFAULT);
+      const defaultValue = roleDefault === null ? '' : ` DEFAULT ${quoteEnumValue(roleDefault)}`;
       const comment = roleColumn.COLUMN_COMMENT
         ? ` COMMENT ${quoteEnumValue(roleColumn.COLUMN_COMMENT)}`
         : '';
@@ -124,6 +132,9 @@ async function migrate() {
 
     await appendEnumValues(connection, process.env.DB_NAME, 'users', 'team', departments);
     await appendEnumValues(connection, process.env.DB_NAME, 'work_orders', 'team', departments);
+    // Tahap 'Verified' (SPV/TL memeriksa hasil pekerjaan) butuh nilai enum baru.
+    // 'In Progress' sudah ada di skema sejak awal dan kini benar-benar dipakai.
+    await appendEnumValues(connection, process.env.DB_NAME, 'work_orders', 'status', ['Verified']);
 
     const workOrderColumns = [
       ['schedule_date', 'DATE NULL'],
@@ -132,6 +143,7 @@ async function migrate() {
       ['manager_approval_note', 'TEXT NULL'],
       ['supervisor_approval_note', 'TEXT NULL'],
       ['evidence', 'VARCHAR(512) NULL'],
+      ['started_at', 'DATETIME NULL'],
     ];
     const [existingColumns] = await connection.execute(
       `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS

@@ -1,0 +1,30 @@
+<%#
+  Topbar halaman: tombol menu (mobile), judul halaman, identitas pengguna,
+  dan aksi logout. Menerima pageTitle & pageSubtitle dari halaman pemanggil.
+%>
+<header class="app-topbar">
+  <button class="topbar-toggle" type="button" onclick="openNav()" aria-label="Buka menu navigasi">
+    <iconify-icon icon="mdi:menu"></iconify-icon>
+  </button>
+
+  <div class="topbar-heading">
+    <h1><%= typeof pageTitle !== 'undefined' && pageTitle ? pageTitle : 'Work Order' %></h1>
+    <% if (typeof pageSubtitle !== 'undefined' && pageSubtitle) { %>
+    <span class="topbar-sub"><%= pageSubtitle %></span>
+    <% } %>
+  </div>
+
+  <div class="topbar-actions">
+    <div class="user-chip">
+      <div class="user-avatar"><%= user && user.nama ? user.nama.charAt(0).toUpperCase() : '?' %></div>
+      <div class="user-chip-meta">
+        <strong><%= user ? user.nama : '' %></strong>
+        <small><%= user ? user.role : '' %><%= user && user.team ? ' · ' + user.team : '' %></small>
+      </div>
+    </div>
+    <a href="/logout" class="btn btn-outline btn-sm" title="Keluar dari aplikasi">
+      <iconify-icon icon="mdi:logout"></iconify-icon>
+      <span>Logout</span>
+    </a>
+  </div>
+</header>

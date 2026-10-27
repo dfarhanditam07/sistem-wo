@@ -1,0 +1,39 @@
+<%#
+  Skrip bersama untuk seluruh halaman: navigasi mobile, toast, dan loading
+  overlay. Ditaruh di satu tempat supaya perilaku shell konsisten.
+%>
+<script>
+  function showLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.style.display = 'flex';
+  }
+
+  function hideLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.style.display = 'none';
+  }
+
+  function closeToast() {
+    const toast = document.getElementById('flashToast');
+    if (toast) {
+      toast.classList.add('fade-out');
+      setTimeout(() => toast.remove(), 300);
+    }
+  }
+
+  function openNav() {
+    document.body.classList.add('nav-open');
+  }
+
+  function closeNav() {
+    document.body.classList.remove('nav-open');
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeNav();
+  });
+
+  <% if (typeof flash !== 'undefined' && flash) { %>
+  setTimeout(closeToast, 4500);
+  <% } %>
+</script>

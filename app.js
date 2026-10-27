@@ -9,10 +9,12 @@ const fs = require('fs');
 const crypto = require('crypto');
 const {
   DEPARTMENTS,
+  STATUS_FLOW,
   canAccessWorkOrder,
   canEditSchedule,
   isTeamTujuan,
   isValidDateRange,
+  statusLabel,
   textInput,
   workOrderScope,
 } = require('./lib/work-order');
@@ -70,9 +72,13 @@ function recordLoginFail(ip) {
 const app = express();
 const PORT = process.env.PORT || 3005;
 
-// Daftarkan helper ke app.locals agar tersedia di semua view EJS
+// Daftarkan helper ke app.locals agar tersedia di semua view EJS.
+// statusLabel/STATUS_FLOW ikut didaftarkan global supaya partial shell
+// (sidebar) dan seluruh halaman memakai istilah status yang sama.
 app.locals.formatRupiah = formatRupiah;
 app.locals.dateInputValue = dateInputValue;
+app.locals.statusLabel = statusLabel;
+app.locals.statusFlow = STATUS_FLOW;
 
 function normalizePublicAssetPath(filePath) {
   if (!filePath) return filePath;
@@ -130,10 +136,25 @@ app.use(
   })
 );
 
-// Flash message middleware (simpan pesan untuk 1 redirect)
+// Flash message middleware (simpan pesan untuk 1 redirect).
+// Sekaligus menyiapkan locals shell (navigasi sidebar/topbar) supaya seluruh
+// halaman memakai penanda menu aktif yang konsisten tanpa perlu dihitung ulang
+// di setiap res.render().
 app.use((req, res, next) => {
   res.locals.flash = req.session.flash || null;
   delete req.session.flash;
+
+  const user = req.session.user || null;
+  res.locals.currentUser = user;
+  res.locals.currentStatus = req.query.status || 'all';
+  res.locals.activeNav = req.path.startsWith('/create-wo')
+    ? 'create'
+    : req.path.startsWith('/view-wo')
+      ? 'detail'
+      : req.path === '/'
+        ? 'dashboard'
+        : '';
+  res.locals.canCreate = Boolean(user) && ['Pemohon', 'Manager', 'Super Admin'].includes(user.role);
   next();
 });
 
@@ -172,6 +193,9 @@ app.get('/uploads/:filename', (req, res) => {
 });
 
 app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
+// Design system dark theme (satu sumber kebenaran tampilan) disajikan statis
+// agar bisa di-cache browser dan dipakai seluruh halaman.
+app.use('/css', express.static(path.join(__dirname, 'public', 'css')));
 
 app.use((req, res, next) => {
   if (req.session?.user?.ttd) {
@@ -394,7 +418,7 @@ app.get('/', (req, res) => {
   const listSql = `
     SELECT wo.*, users.nama AS nama_pemohon,
            CASE WHEN wo.due_date < CURDATE()
-             AND wo.status NOT IN ('Completed', 'Closed') THEN 1 ELSE 0 END AS is_overdue
+             AND wo.status NOT IN ('Completed', 'Verified', 'Closed') THEN 1 ELSE 0 END AS is_overdue
     FROM work_orders wo
     LEFT JOIN users ON wo.prepared_by = users.id
     ${whereSql}
@@ -406,14 +430,14 @@ app.get('/', (req, res) => {
   const statsWhere = scope.sql ? `WHERE ${scope.sql}` : '';
   const allStatsSql = `
     SELECT status, COUNT(*) AS cnt,
-           SUM(CASE WHEN due_date < CURDATE() AND status NOT IN ('Completed', 'Closed') THEN 1 ELSE 0 END) AS overdue
+           SUM(CASE WHEN due_date < CURDATE() AND status NOT IN ('Completed', 'Verified', 'Closed') THEN 1 ELSE 0 END) AS overdue
     FROM work_orders wo
     ${statsWhere}
     GROUP BY status
   `;
   const teamStatsSql = `
     SELECT team, status, COUNT(*) AS cnt,
-           SUM(CASE WHEN due_date < CURDATE() AND status NOT IN ('Completed', 'Closed') THEN 1 ELSE 0 END) AS overdue
+           SUM(CASE WHEN due_date < CURDATE() AND status NOT IN ('Completed', 'Verified', 'Closed') THEN 1 ELSE 0 END) AS overdue
     FROM work_orders wo
     ${statsWhere ? `${statsWhere} AND` : 'WHERE'} team IS NOT NULL AND team <> ''
     GROUP BY team, status
@@ -443,10 +467,12 @@ app.get('/', (req, res) => {
               teamStatsAgg[r.team] = { total: 0, pending: 0, done: 0, overdue: 0 };
             teamStatsAgg[r.team].total += r.cnt;
             teamStatsAgg[r.team].overdue += Number(r.overdue || 0);
-            if (r.status === 'Submitted' || r.status === 'Reviewed' || r.status === 'Draft')
-              teamStatsAgg[r.team].pending += r.cnt;
-            if (r.status === 'Completed' || r.status === 'Closed')
+            // Ringkasan departemen: semua status yang belum selesai (termasuk
+            // Approved & In Progress) dihitung pending, sisanya done, supaya
+            // pending + done selalu = total dan tidak ada status yang hilang.
+            if (['Completed', 'Verified', 'Closed'].includes(r.status))
               teamStatsAgg[r.team].done += r.cnt;
+            else teamStatsAgg[r.team].pending += r.cnt;
           });
 
           res.render('dashboard', {
@@ -470,6 +496,8 @@ app.get('/', (req, res) => {
             overdueCount,
             teamStats: teamStatsAgg,
             validTeams: DEPARTMENTS,
+            statusFlow: STATUS_FLOW,
+            statusLabel,
             canCreate: ['Pemohon', 'Manager', 'Super Admin'].includes(req.session.user.role),
             canDelete: req.session.user.role === 'Super Admin',
           });
@@ -494,7 +522,12 @@ app.get('/create-wo', (req, res) => {
     return res.redirect('/');
   }
 
-  const selectedTeam = user.role === 'Pemohon' ? user.team : req.query.team;
+  const requestedTeam = req.query.team;
+  const selectedTeam = DEPARTMENTS.includes(requestedTeam)
+    ? requestedTeam
+    : user.role === 'Pemohon'
+      ? user.team
+      : null;
   if (!selectedTeam || !DEPARTMENTS.includes(selectedTeam)) {
     req.session.flash = {
       type: 'warn',
@@ -533,7 +566,6 @@ app.get('/create-wo', (req, res) => {
       // Pemohon hanya mengisi data permohonan; jadwal pelaksanaan & jatuh tempo
       // baru bisa diisi Team Tujuan setelah WO tersimpan.
       canEditSchedule: false,
-      canSaveSchedule: false,
     });
   });
 });
@@ -562,8 +594,7 @@ app.post(
       !uraian_pekerjaan.trim() ||
       typeof lokasi !== 'string' ||
       !lokasi.trim() ||
-      !DEPARTMENTS.includes(team) ||
-      (user.role === 'Pemohon' && team !== user.team)
+      !DEPARTMENTS.includes(team)
     ) {
       req.session.flash = {
         type: 'error',
@@ -583,12 +614,11 @@ app.post(
       team: team,
       submitted_at: new Date(),
       // Jadwal pelaksanaan & tanggal jatuh tempo SENGAJA tidak diambil dari input Pemohon.
-      // Sesuai alur bisnis, kedua tanggal ini hanya boleh diisi oleh Team Tujuan
-      // (Supervisor/Team Leader lewat aksi 'update_schedule') atau Manager/Super Admin
-      // (lewat aksi 'update'). Nilai apa pun yang dikirim dari form create diabaikan di sini.
+      // Sesuai alur bisnis, kedua tanggal ini disetor oleh SPV/TL departemen tujuan
+      // sekaligus saat aksi 'spv_approve', atau dikoreksi Manager/Super Admin lewat
+      // aksi 'update'. Nilai apa pun yang dikirim dari form create diabaikan di sini.
       schedule_date: null,
       due_date: null,
-      material_request_note: textInput(req.body.material_request_note) || null,
     };
 
     db.getConnection((connectionErr, connection) => {
@@ -691,7 +721,7 @@ app.get('/view-wo/:id', (req, res) => {
       (historyErr, history) => {
         if (historyErr) return handleErr(req, res, historyErr);
 
-        const steps = ['Submitted', 'Reviewed', 'Approved', 'Completed', 'Verified', 'Closed'];
+        const steps = STATUS_FLOW;
         const statusIdx = steps.indexOf(workOrder.status);
 
         res.render('form-wo', {
@@ -702,12 +732,15 @@ app.get('/view-wo/:id', (req, res) => {
           flash: res.locals.flash,
           rejectReason: workOrder.reject_reason || null,
           formatRupiah,
+          statusLabel,
           timeline: { steps, currentIdx: statusIdx },
           history,
           canManage: ['Manager', 'Super Admin'].includes(req.session.user.role),
           canDelete: req.session.user.role === 'Super Admin',
           canEditSchedule: canEditSchedule(req.session.user, workOrder),
-          canSaveSchedule: isTeamTujuan(req.session.user, workOrder),
+          // Pelaksana pekerjaan = SPV/TL departemen tujuan (atau Super Admin);
+          // mereka yang menjalankan tahap In Progress, Completed, dan Verified.
+          canHandleWork: isTeamTujuan(req.session.user, workOrder),
         });
       }
     );
@@ -734,7 +767,6 @@ app.post('/action-wo/:id', requireLogin, handleUpload(upload.any()), (req, res) 
     let message = '';
     let historyNote = '';
     let expectedStatus = null;
-    let requireUnverified = false;
 
     if ((role === 'Manager' || role === 'Super Admin') && action === 'manager_approve') {
       if (wo.status !== 'Submitted') {
@@ -760,22 +792,60 @@ app.post('/action-wo/:id', requireLogin, handleUpload(upload.any()), (req, res) 
       }
       historyNote = textInput(req.body.approval_note);
       expectedStatus = 'Reviewed';
+      // Jadwal Pelaksanaan & Tanggal Jatuh Tempo disetor oleh SPV/TL departemen
+      // tujuan sekaligus pada saat persetujuan ini, sehingga tanggal tersebut
+      // wajib diisi dan rentangnya harus valid.
+      const spvScheduleDate = req.body.schedule_date || null;
+      const spvDueDate = req.body.due_date || null;
+      if (!spvScheduleDate || !spvDueDate || !isValidDateRange(spvScheduleDate, spvDueDate)) {
+        req.session.flash = {
+          type: 'error',
+          message:
+            'Jadwal pelaksanaan dan tanggal jatuh tempo wajib diisi dengan rentang yang valid.',
+        };
+        return redirectBack(req, res, `/view-wo/${woId}`);
+      }
       updateData = {
         status: 'Approved',
         reviewed_by: userId,
         reviewed_at: new Date(),
+        schedule_date: spvScheduleDate,
+        due_date: spvDueDate,
         supervisor_approval_note: historyNote || null,
       };
       message = 'Persetujuan Supervisor/Team Leader tersimpan.';
-    } else if ((role === 'Pemohon' || role === 'Super Admin') && action === 'complete') {
-      if (
-        wo.status !== 'Approved' ||
-        (role === 'Pemohon' && String(wo.prepared_by) !== String(userId))
-      ) {
-        req.session.flash = { type: 'error', message: 'WO harus status Approved terlebih dahulu.' };
+    } else if (
+      (role === 'Supervisor' || role === 'Team Leader' || role === 'Super Admin') &&
+      action === 'start_work'
+    ) {
+      // Pelaksana pekerjaan adalah SPV/TL departemen tujuan. Tahap In Progress
+      // wajib dilalui sebelum pekerjaan boleh dinyatakan selesai.
+      if (wo.status !== 'Approved' || !isTeamTujuan(user, wo)) {
+        req.session.flash = {
+          type: 'error',
+          message: 'WO harus status Approved dan Anda pelaksana departemen tujuan.',
+        };
         return res.redirect('/');
       }
       expectedStatus = 'Approved';
+      updateData = {
+        status: 'In Progress',
+        started_at: new Date(),
+      };
+      historyNote = textInput(req.body.start_note);
+      message = 'Pekerjaan dimulai. Status WO menjadi In Progress.';
+    } else if (
+      (role === 'Supervisor' || role === 'Team Leader' || role === 'Super Admin') &&
+      action === 'complete'
+    ) {
+      if (wo.status !== 'In Progress' || !isTeamTujuan(user, wo)) {
+        req.session.flash = {
+          type: 'error',
+          message: 'WO harus status In Progress dan Anda pelaksana departemen tujuan.',
+        };
+        return res.redirect('/');
+      }
+      expectedStatus = 'In Progress';
       updateData = {
         status: 'Completed',
         performed_by: userId,
@@ -784,21 +854,21 @@ app.post('/action-wo/:id', requireLogin, handleUpload(upload.any()), (req, res) 
         completed_at: new Date(),
       };
       historyNote = textInput(req.body.completion_status);
-      message = 'Pekerjaan telah diselesaikan. Menunggu verifikasi Supervisor/Team Leader.';
+      message = 'Pekerjaan dinyatakan selesai. Menunggu verifikasi Supervisor/Team Leader.';
     } else if (
       (role === 'Supervisor' || role === 'Team Leader' || role === 'Super Admin') &&
       action === 'verify'
     ) {
-      if (wo.status !== 'Completed' || wo.verified_by) {
+      if (wo.status !== 'Completed' || !isTeamTujuan(user, wo)) {
         req.session.flash = {
           type: 'error',
-          message: 'WO harus status Completed terlebih dahulu.',
+          message: 'WO harus status Completed dan Anda penanggung jawab departemen tujuan.',
         };
         return res.redirect('/');
       }
       expectedStatus = 'Completed';
-      requireUnverified = true;
       updateData = {
+        status: 'Verified',
         verified_by: userId,
         verified_at: new Date(),
       };
@@ -806,8 +876,7 @@ app.post('/action-wo/:id', requireLogin, handleUpload(upload.any()), (req, res) 
       message = 'Hasil pekerjaan telah diverifikasi!';
     } else if ((role === 'Pemohon' || role === 'Super Admin') && action === 'close') {
       if (
-        wo.status !== 'Completed' ||
-        !wo.verified_by ||
+        wo.status !== 'Verified' ||
         (role === 'Pemohon' && String(wo.prepared_by) !== String(userId))
       ) {
         req.session.flash = {
@@ -816,7 +885,7 @@ app.post('/action-wo/:id', requireLogin, handleUpload(upload.any()), (req, res) 
         };
         return res.redirect('/');
       }
-      expectedStatus = 'Completed';
+      expectedStatus = 'Verified';
       const evidence = (req.files || []).find((file) => file.fieldname === 'evidence_file');
       updateData = {
         status: 'Closed',
@@ -870,11 +939,14 @@ app.post('/action-wo/:id', requireLogin, handleUpload(upload.any()), (req, res) 
         lokasi: textInput(req.body.lokasi || wo.lokasi),
         lampiran: finalLampiran,
         status: 'Submitted',
-        team: role === 'Pemohon' ? user.team : wo.team,
+        // Departemen TUJUAN boleh diperbaiki Pemohon saat mengajukan ulang (mis.
+        // salah kirim IT padahal harus Electrical). Nilai diambil dari form dan
+        // tetap divalidasi terhadap daftar departemen; kalau tidak valid, pakai
+        // departemen WO yang tersimpan supaya tujuan tidak pernah kosong.
+        team: DEPARTMENTS.includes(req.body.team) ? req.body.team : wo.team,
         // schedule_date & due_date TIDAK disentuh di sini: ini aksi Pemohon, dan jadwal
         // pelaksanaan + tanggal jatuh tempo hanya boleh diisi oleh Team Tujuan
         // (Supervisor/Team Leader) atau Manager/Super Admin. Nilai lama tetap dipertahankan.
-        material_request_note: textInput(req.body.material_request_note) || null,
         reject_reason: null,
         submitted_at: new Date(), // reset timestamp submit
         reviewed_at: null,
@@ -899,7 +971,6 @@ app.post('/action-wo/:id', requireLogin, handleUpload(upload.any()), (req, res) 
         team,
         schedule_date: req.body.schedule_date || null,
         due_date: req.body.due_date || null,
-        material_request_note: textInput(req.body.material_request_note) || null,
       };
       if (
         !updateData.no_wo ||
@@ -915,40 +986,6 @@ app.post('/action-wo/:id', requireLogin, handleUpload(upload.any()), (req, res) 
       }
       historyNote = 'Data WO diperbarui oleh Manager/Super Admin.';
       message = 'Perubahan Work Order berhasil disimpan.';
-    } else if (action === 'update_schedule' && isTeamTujuan(user, wo)) {
-      // Alur Jadwal Pelaksanaan & Tanggal Jatuh Tempo: hanya Team Tujuan (Supervisor/Team
-      // Leader dari departemen tujuan WO) atau Super Admin yang boleh mengisi/mengubah kedua
-      // tanggal ini. Pemohon tidak memiliki action ini sehingga tidak mungkin mencapai cabang ini.
-      if (wo.status === 'Closed') {
-        req.session.flash = {
-          type: 'error',
-          message: 'WO sudah Closed; jadwal pelaksanaan tidak dapat diubah lagi.',
-        };
-        return res.redirect('/');
-      }
-      if (!isValidDateRange(req.body.schedule_date, req.body.due_date)) {
-        req.session.flash = {
-          type: 'error',
-          message: 'Rentang jadwal dan jatuh tempo tidak valid.',
-        };
-        return res.redirect('/');
-      }
-      updateData = {
-        schedule_date: req.body.schedule_date || null,
-        due_date: req.body.due_date || null,
-      };
-      historyNote = 'Jadwal pelaksanaan dan tanggal jatuh tempo diperbarui oleh Team Tujuan.';
-      message = 'Jadwal pelaksanaan dan tanggal jatuh tempo berhasil disimpan.';
-    } else if (
-      action === 'update_mr_note' &&
-      ['Pemohon', 'Manager', 'Super Admin'].includes(role) &&
-      (role !== 'Pemohon' || String(wo.prepared_by) === String(userId))
-    ) {
-      updateData = {
-        material_request_note: textInput(req.body.material_request_note) || null,
-      };
-      historyNote = updateData.material_request_note || 'Catatan MR dihapus.';
-      message = 'Keterangan Material Request berhasil disimpan.';
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -962,7 +999,6 @@ app.post('/action-wo/:id', requireLogin, handleUpload(upload.any()), (req, res) 
       updateSql += ' AND status = ?';
       updateParams.push(expectedStatus);
     }
-    if (requireUnverified) updateSql += ' AND verified_by IS NULL';
 
     db.getConnection((connectionErr, connection) => {
       if (connectionErr) return handleErr(req, res, connectionErr);
