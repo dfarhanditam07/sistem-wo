@@ -99,8 +99,7 @@ body {
   color: var(--text);
   background:
     radial-gradient(1200px 600px at 15% -10%, rgba(76, 141, 255, 0.12), transparent 60%),
-    radial-gradient(900px 500px at 100% 0%, rgba(56, 189, 248, 0.08), transparent 55%),
-    var(--bg);
+    radial-gradient(900px 500px at 100% 0%, rgba(56, 189, 248, 0.08), transparent 55%), var(--bg);
   background-attachment: fixed;
 }
 
@@ -193,14 +192,30 @@ hr {
   font-family: var(--font-mono);
 }
 
-.mt-0 { margin-top: 0; }
-.mt-8 { margin-top: 8px; }
-.mt-16 { margin-top: 16px; }
-.mt-24 { margin-top: 24px; }
-.mb-0 { margin-bottom: 0; }
-.mb-8 { margin-bottom: 8px; }
-.mb-16 { margin-bottom: 16px; }
-.mb-24 { margin-bottom: 24px; }
+.mt-0 {
+  margin-top: 0;
+}
+.mt-8 {
+  margin-top: 8px;
+}
+.mt-16 {
+  margin-top: 16px;
+}
+.mt-24 {
+  margin-top: 24px;
+}
+.mb-0 {
+  margin-bottom: 0;
+}
+.mb-8 {
+  margin-bottom: 8px;
+}
+.mb-16 {
+  margin-bottom: 16px;
+}
+.mb-24 {
+  margin-bottom: 24px;
+}
 
 .stack {
   display: flex;
@@ -454,7 +469,9 @@ hr {
   border-radius: var(--radius);
   padding: 18px 20px;
   overflow: hidden;
-  transition: transform var(--t), border-color var(--t);
+  transition:
+    transform var(--t),
+    border-color var(--t);
 }
 
 .stat-card::before {
@@ -470,11 +487,21 @@ hr {
   border-color: var(--border-strong);
 }
 
-.stat-card.total::before { background: var(--primary); }
-.stat-card.submitted::before { background: var(--warning); }
-.stat-card.approved::before { background: var(--success); }
-.stat-card.completed::before { background: var(--info); }
-.stat-card.overdue::before { background: var(--danger); }
+.stat-card.total::before {
+  background: var(--primary);
+}
+.stat-card.submitted::before {
+  background: var(--warning);
+}
+.stat-card.approved::before {
+  background: var(--success);
+}
+.stat-card.completed::before {
+  background: var(--info);
+}
+.stat-card.overdue::before {
+  background: var(--danger);
+}
 
 .stat-icon {
   font-size: 26px;
@@ -638,12 +665,30 @@ table {
   white-space: nowrap;
 }
 
-.badge-primary { background: var(--primary-soft); color: #a8c8ff; }
-.badge-success { background: var(--success-soft); color: #7ce7bd; }
-.badge-warn { background: var(--warning-soft); color: #fcd579; }
-.badge-danger { background: var(--danger-soft); color: #fca5a5; }
-.badge-info { background: var(--info-soft); color: #8fd8fb; }
-.badge-violet { background: var(--violet-soft); color: #d6cbfd; }
+.badge-primary {
+  background: var(--primary-soft);
+  color: #a8c8ff;
+}
+.badge-success {
+  background: var(--success-soft);
+  color: #7ce7bd;
+}
+.badge-warn {
+  background: var(--warning-soft);
+  color: #fcd579;
+}
+.badge-danger {
+  background: var(--danger-soft);
+  color: #fca5a5;
+}
+.badge-info {
+  background: var(--info-soft);
+  color: #8fd8fb;
+}
+.badge-violet {
+  background: var(--violet-soft);
+  color: #d6cbfd;
+}
 
 .chip {
   display: inline-flex;
@@ -671,16 +716,40 @@ table {
   color: #cbd5e1;
 }
 
-.status-badge.Draft { background: var(--slate-soft); color: #cbd5e1; }
-.status-badge.Submitted { background: var(--warning-soft); color: #fcd579; }
-.status-badge.Reviewed { background: var(--primary-soft); color: #a8c8ff; }
-.status-badge.Approved { background: var(--success-soft); color: #7ce7bd; }
+.status-badge.Draft {
+  background: var(--slate-soft);
+  color: #cbd5e1;
+}
+.status-badge.Submitted {
+  background: var(--warning-soft);
+  color: #fcd579;
+}
+.status-badge.Reviewed {
+  background: var(--primary-soft);
+  color: #a8c8ff;
+}
+.status-badge.Approved {
+  background: var(--success-soft);
+  color: #7ce7bd;
+}
 /* Nilai status 'In Progress' mengandung spasi, sehingga di HTML terpecah menjadi
    dua kelas ("In" dan "Progress"); selector gabungan ini yang mencocokkannya. */
-.status-badge.In.Progress { background: rgba(251, 146, 60, 0.16); color: #fdba74; }
-.status-badge.Completed { background: var(--info-soft); color: #8fd8fb; }
-.status-badge.Verified { background: var(--violet-soft); color: #d6cbfd; }
-.status-badge.Closed { background: rgba(52, 211, 153, 0.24); color: #86efac; }
+.status-badge.In.Progress {
+  background: rgba(251, 146, 60, 0.16);
+  color: #fdba74;
+}
+.status-badge.Completed {
+  background: var(--info-soft);
+  color: #8fd8fb;
+}
+.status-badge.Verified {
+  background: var(--violet-soft);
+  color: #d6cbfd;
+}
+.status-badge.Closed {
+  background: rgba(52, 211, 153, 0.24);
+  color: #86efac;
+}
 
 /* ---------- 12. TOMBOL ---------- */
 .btn {
@@ -696,7 +765,10 @@ table {
   font-weight: 700;
   cursor: pointer;
   text-decoration: none;
-  transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
+  transition:
+    background var(--t-fast),
+    border-color var(--t-fast),
+    transform var(--t-fast);
   white-space: nowrap;
 }
 
@@ -822,7 +894,10 @@ table {
   font-size: var(--fs-sm);
   font-weight: 700;
   cursor: pointer;
-  transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
+  transition:
+    background var(--t-fast),
+    border-color var(--t-fast),
+    transform var(--t-fast);
 }
 
 .btn-action:hover {
@@ -868,7 +943,10 @@ textarea,
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 10px;
-  transition: border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
+  transition:
+    border-color var(--t-fast),
+    box-shadow var(--t-fast),
+    background var(--t-fast);
 }
 
 input::placeholder,
@@ -1093,14 +1171,30 @@ input[type='checkbox'] {
   margin-top: 1px;
 }
 
-.toast-success { border-left-color: var(--success); }
-.toast-success iconify-icon { color: var(--success); }
-.toast-error { border-left-color: var(--danger); }
-.toast-error iconify-icon { color: var(--danger); }
-.toast-warn { border-left-color: var(--warning); }
-.toast-warn iconify-icon { color: var(--warning); }
-.toast-info { border-left-color: var(--info); }
-.toast-info iconify-icon { color: var(--info); }
+.toast-success {
+  border-left-color: var(--success);
+}
+.toast-success iconify-icon {
+  color: var(--success);
+}
+.toast-error {
+  border-left-color: var(--danger);
+}
+.toast-error iconify-icon {
+  color: var(--danger);
+}
+.toast-warn {
+  border-left-color: var(--warning);
+}
+.toast-warn iconify-icon {
+  color: var(--warning);
+}
+.toast-info {
+  border-left-color: var(--info);
+}
+.toast-info iconify-icon {
+  color: var(--info);
+}
 
 .toast-close {
   margin-left: auto;
@@ -1118,8 +1212,14 @@ input[type='checkbox'] {
 }
 
 @keyframes toastIn {
-  from { opacity: 0; transform: translateX(40px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .toast.fade-out {
@@ -1127,7 +1227,10 @@ input[type='checkbox'] {
 }
 
 @keyframes toastOut {
-  to { opacity: 0; transform: translateX(40px); }
+  to {
+    opacity: 0;
+    transform: translateX(40px);
+  }
 }
 
 /* ---------- 16. MODAL ---------- */
@@ -1245,13 +1348,23 @@ input[type='checkbox'] {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes popIn {
-  from { transform: scale(0.94); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.94);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* ---------- 17. LOADING OVERLAY ---------- */
@@ -1276,7 +1389,9 @@ input[type='checkbox'] {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ---------- 18. PAGINATION ---------- */
@@ -1317,7 +1432,10 @@ input[type='checkbox'] {
   font-weight: 700;
   text-align: center;
   cursor: pointer;
-  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+  transition:
+    background var(--t-fast),
+    color var(--t-fast),
+    border-color var(--t-fast);
 }
 
 .page-btn:hover:not(.is-disabled) {
@@ -1463,8 +1581,13 @@ input[type='checkbox'] {
 }
 
 @keyframes stepPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.07); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.07);
+  }
 }
 
 /* ---------- 21. TOOLBAR AKSI (export/print) ---------- */
@@ -1489,7 +1612,10 @@ input[type='checkbox'] {
   font-size: var(--fs-xs);
   font-weight: 700;
   cursor: pointer;
-  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+  transition:
+    background var(--t-fast),
+    color var(--t-fast),
+    border-color var(--t-fast);
 }
 
 .toolbar-btn:hover {
@@ -2039,8 +2165,14 @@ input[type='checkbox'] {
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ---------- 25. RESPONSIF ---------- */
