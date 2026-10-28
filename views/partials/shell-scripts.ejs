@@ -21,7 +21,7 @@
     }
   }
 
-  <% if (typeof flash !== 'undefined' && flash) { %>
-  setTimeout(closeToast, 4500);
-  <% } %>
+  if (document.getElementById('flashToast')) {
+    setTimeout(closeToast, 4500);
+  }
 </script>

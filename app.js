@@ -20,7 +20,6 @@ const {
   workOrderScope,
 } = require('./lib/work-order');
 
-// Pastikan folder uploads selalu ada (Multer tidak auto-create direktori)
 const uploadDir = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
@@ -42,10 +41,6 @@ function padZero(n, len = 3) {
   return String(n).padStart(len, '0');
 }
 
-// Redirect helper pengganti res.redirect('back') (Express 5 tidak lagi
-// menangani target 'back' secara otomatis sehingga akan redirect ke URL literal
-// "back" yang salah). Dipakai supaya pesan error validasi/upload membawa user
-// kembali ke form asal, bukan ke halaman yang tidak valid.
 function redirectBack(req, res, fallback = '/') {
   const referer = req.get('Referer');
   res.redirect(referer && referer.trim() ? referer : fallback);
@@ -73,9 +68,6 @@ function recordLoginFail(ip) {
 const app = express();
 const PORT = process.env.PORT || 3005;
 
-// Daftarkan helper ke app.locals agar tersedia di semua view EJS.
-// statusLabel/STATUS_FLOW ikut didaftarkan global supaya seluruh halaman
-// memakai istilah status yang sama.
 app.locals.formatRupiah = formatRupiah;
 app.locals.dateInputValue = dateInputValue;
 app.locals.statusLabel = statusLabel;
@@ -106,7 +98,6 @@ const db = mysql.createPool({
   database: process.env.DB_NAME,
 });
 
-// BENAR untuk mysql.createPool
 db.getConnection((err, connection) => {
   if (err) {
     console.error('Gagal terhubung ke database:', err.message);
@@ -117,15 +108,12 @@ db.getConnection((err, connection) => {
 });
 
 // 3. Konfigurasi Sistem (Middleware)
-// Memberi tahu sistem bahwa kita menggunakan EJS untuk tampilan HTML
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Mengizinkan sistem membaca data yang dikirim dari Form HTML
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Mengaktifkan sistem Session untuk Login nanti
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
@@ -138,10 +126,6 @@ app.use(
   })
 );
 
-// Flash message middleware (simpan pesan untuk 1 redirect).
-// Sekaligus menyiapkan locals bersama (pengguna & hak buat WO) supaya seluruh
-// halaman memakai penanda yang konsisten tanpa perlu dihitung ulang di setiap
-// res.render().
 app.use((req, res, next) => {
   res.locals.flash = req.session.flash || null;
   delete req.session.flash;
@@ -187,8 +171,6 @@ app.get('/uploads/:filename', (req, res) => {
 });
 
 app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
-// Design system dark theme (satu sumber kebenaran tampilan) disajikan statis
-// agar bisa di-cache browser dan dipakai seluruh halaman.
 app.use('/css', express.static(path.join(__dirname, 'public', 'css')));
 
 app.use((req, res, next) => {
@@ -198,28 +180,18 @@ app.use((req, res, next) => {
   next();
 });
 
-// ---------- KONFIGURASI UPLOAD (Multer) ----------
-// Satu sumber kebenaran untuk batas upload, dipakai backend (Multer) maupun
-// frontend (lewat app.locals di bawah) supaya pesan & validasi selalu konsisten.
-// Default 10MB/file & 5 file dipilih karena lampiran WO berupa hasil scan PDF/foto
-// RAB (umumnya < 5MB); batas ini cukup longgar untuk pemakaian wajar namun tetap
-// membatasi beban disk/koneksi dari upload yang tidak wajar. Bisa dioverride lewat
-// .env (MAX_UPLOAD_SIZE_MB / MAX_UPLOAD_FILES) tanpa mengubah kode.
 const MAX_FILE_SIZE_MB = Number(process.env.MAX_UPLOAD_SIZE_MB) || 10;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const MAX_UPLOAD_FILES = Number(process.env.MAX_UPLOAD_FILES) || 5;
 const ALLOWED_UPLOAD_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.pdf']);
 const ALLOWED_UPLOAD_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'application/pdf']);
 
-// Daftarkan ke app.locals supaya EJS (frontend) selalu sinkron dengan batas backend,
-// tanpa perlu meneruskan variabel ini secara manual di setiap res.render().
 app.locals.maxFileSizeMB = MAX_FILE_SIZE_MB;
 app.locals.maxUploadFiles = MAX_UPLOAD_FILES;
 
-// Konfigurasi penyimpanan Multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadDir); // Simpan ke folder ini
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const extension = path.extname(file.originalname).toLowerCase();
@@ -228,10 +200,6 @@ const storage = multer.diskStorage({
       .replace(/[^a-zA-Z0-9_-]/g, '_')
       .slice(0, 80);
     const filename = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}-${safeName}${extension}`;
-    // Catat file yang akan ditulis oleh request ini. Multer hanya membersihkan
-    // file yang gagal secara best-effort: bila abort terjadi saat file masih
-    // ditulis, file parsial bisa tertinggal di disk. handleUpload() memakai
-    // daftar ini untuk menghapus sisa file saat upload ditolak.
     (req.uploadedFilePaths = req.uploadedFilePaths || []).push(path.join(uploadDir, filename));
     cb(null, filename);
   },
@@ -240,8 +208,6 @@ const upload = multer({
   storage,
   limits: { fileSize: MAX_FILE_SIZE_BYTES, files: MAX_UPLOAD_FILES },
   fileFilter: (req, file, cb) => {
-    // Validasi ganda: ekstensi DAN mimetype. Ekstensi saja mudah dipalsukan
-    // (rename .exe jadi .pdf), jadi keduanya harus cocok dengan whitelist.
     const ext = path.extname(file.originalname).toLowerCase();
     if (!ALLOWED_UPLOAD_EXTENSIONS.has(ext) || !ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
       return cb(new Error('Jenis file harus JPG, PNG, atau PDF.'));
@@ -250,9 +216,6 @@ const upload = multer({
   },
 });
 
-// Middleware auth dasar. PENTING: middleware ini HARUS dipasang SEBELUM middleware
-// Multer pada route upload, supaya request yang belum login/tidak berwenang ditolak
-// lebih dulu dan tidak sempat menulis file ke disk (keamanan + performa).
 function requireLogin(req, res, next) {
   if (!req.session.user) return res.redirect('/login');
   next();
@@ -267,9 +230,6 @@ function requireRole(...roles) {
   };
 }
 
-// Bungkus middleware Multer supaya error upload (ukuran file kelebihan, jumlah
-// file kelebihan, tipe file tidak valid) ditangani dengan flash message yang
-// ramah ke pengguna, bukan error page/stack trace bawaan Express.
 function handleUpload(multerMiddleware) {
   return (req, res, next) => {
     multerMiddleware(req, res, (err) => {
@@ -285,13 +245,10 @@ function handleUpload(multerMiddleware) {
           message = 'Berkas gagal diunggah: ' + err.message;
         }
       } else if (err.message) {
-        message = err.message; // contoh: dari fileFilter -> "Jenis file harus JPG, PNG, atau PDF."
+        message = err.message;
       }
 
       console.error('Upload error:', err.message);
-      // Bersihkan sisa file milik request ini. Bila tidak, file parsial/orphan
-      // menumpuk di disk setiap kali upload ditolak (boros storage) dan bisa
-      // dibuka jika namanya diketahui (risiko keamanan).
       cleanupUploadedFiles(req);
       req.session.flash = { type: 'error', message };
       return redirectBack(req, res, '/');
@@ -299,7 +256,6 @@ function handleUpload(multerMiddleware) {
   };
 }
 
-// Hapus file yang tercatat pada request. ENOENT (sudah dihapus Multer) diabaikan.
 function cleanupUploadedFiles(req) {
   (req.uploadedFilePaths || []).forEach((filePath) => {
     fs.unlink(filePath, (err) => {
@@ -343,7 +299,6 @@ app.post('/login', (req, res) => {
       return res.redirect('/login');
     }
 
-    // TEMP: plain compare sampai bcrypt diaktifkan (sesuai rencana upgrade #12)
     if (results.length > 0 && results[0].password === password) {
       results[0].ttd = normalizePublicAssetPath(results[0].ttd);
       req.session.user = results[0];
@@ -370,7 +325,6 @@ app.get('/logout', (req, res) => {
   res.redirect('/login');
 });
 
-// Helper: kirim notifikasi + redirect (tanpa alert inline JS)
 // 1. HALAMAN UTAMA: Dashboard dengan Pagination, Filter Team, Sort
 app.get('/', (req, res) => {
   if (!req.session.user) return res.redirect('/login');
@@ -461,9 +415,6 @@ app.get('/', (req, res) => {
               teamStatsAgg[r.team] = { total: 0, pending: 0, done: 0, overdue: 0 };
             teamStatsAgg[r.team].total += r.cnt;
             teamStatsAgg[r.team].overdue += Number(r.overdue || 0);
-            // Ringkasan departemen: semua status yang belum selesai (termasuk
-            // Approved & In Progress) dihitung pending, sisanya done, supaya
-            // pending + done selalu = total dan tidak ada status yang hilang.
             if (['Completed', 'Verified', 'Closed'].includes(r.status))
               teamStatsAgg[r.team].done += r.cnt;
             else teamStatsAgg[r.team].pending += r.cnt;
@@ -528,10 +479,6 @@ app.get('/create-wo', (req, res) => {
     return res.redirect('/');
   }
 
-  // Manager/Super Admin yang membuka halaman ini tanpa ?team=... (mis. lewat menu
-  // sidebar) belum punya departemen tujuan, sehingga nomor WO belum bisa dibuat.
-  // Form tetap ditampilkan dengan dropdown departemen kosong; memilih departemen
-  // akan memuat ulang halaman dengan ?team=... dan nomor WO dibuat saat itu.
   if (!selectedTeam) {
     return res.render('form-wo', {
       user: req.session.user,
@@ -569,8 +516,6 @@ app.get('/create-wo', (req, res) => {
       autoNoWO: noWO,
       flash: res.locals.flash,
       rejectReason: null,
-      // Pemohon hanya mengisi data permohonan; jadwal pelaksanaan & jatuh tempo
-      // baru bisa diisi Team Tujuan setelah WO tersimpan.
       canEditSchedule: false,
     });
   });
@@ -591,7 +536,6 @@ app.post(
       lampiranPath = paths.join(',');
     }
 
-    // Basic server-side validation
     const { no_wo, uraian_pekerjaan, lokasi, team } = req.body;
     if (
       typeof no_wo !== 'string' ||
@@ -619,10 +563,6 @@ app.post(
       prepared_by: user.id,
       team: team,
       submitted_at: new Date(),
-      // Jadwal pelaksanaan & tanggal jatuh tempo SENGAJA tidak diambil dari input Pemohon.
-      // Sesuai alur bisnis, kedua tanggal ini disetor oleh SPV/TL departemen tujuan
-      // sekaligus saat aksi 'spv_approve', atau dikoreksi Manager/Super Admin lewat
-      // aksi 'update'. Nilai apa pun yang dikirim dari form create diabaikan di sini.
       schedule_date: null,
       due_date: null,
     };
@@ -744,8 +684,6 @@ app.get('/view-wo/:id', (req, res) => {
           canManage: ['Manager', 'Super Admin'].includes(req.session.user.role),
           canDelete: req.session.user.role === 'Super Admin',
           canEditSchedule: canEditSchedule(req.session.user, workOrder),
-          // Pelaksana pekerjaan = SPV/TL departemen tujuan (atau Super Admin);
-          // mereka yang menjalankan tahap In Progress, Completed, dan Verified.
           canHandleWork: isTeamTujuan(req.session.user, workOrder),
         });
       }
@@ -798,9 +736,7 @@ app.post('/action-wo/:id', requireLogin, handleUpload(upload.any()), (req, res) 
       }
       historyNote = textInput(req.body.approval_note);
       expectedStatus = 'Reviewed';
-      // Jadwal Pelaksanaan & Tanggal Jatuh Tempo disetor oleh SPV/TL departemen
-      // tujuan sekaligus pada saat persetujuan ini, sehingga tanggal tersebut
-      // wajib diisi dan rentangnya harus valid.
+
       const spvScheduleDate = req.body.schedule_date || null;
       const spvDueDate = req.body.due_date || null;
       if (!spvScheduleDate || !spvDueDate || !isValidDateRange(spvScheduleDate, spvDueDate)) {
@@ -824,8 +760,6 @@ app.post('/action-wo/:id', requireLogin, handleUpload(upload.any()), (req, res) 
       (role === 'Supervisor' || role === 'Team Leader' || role === 'Super Admin') &&
       action === 'start_work'
     ) {
-      // Pelaksana pekerjaan adalah SPV/TL departemen tujuan. Tahap In Progress
-      // wajib dilalui sebelum pekerjaan boleh dinyatakan selesai.
       if (wo.status !== 'Approved' || !isTeamTujuan(user, wo)) {
         req.session.flash = {
           type: 'error',
@@ -919,8 +853,6 @@ app.post('/action-wo/:id', requireLogin, handleUpload(upload.any()), (req, res) 
       updateData = {
         status: 'Draft',
         reject_reason: historyNote,
-        // Tanda tangan & catatan persetujuan sebelumnya dibatalkan karena WO
-        // kembali ke Draft dan harus disetujui ulang dari awal.
         reviewed_by: null,
         reviewed_at: null,
         approved_by: null,
@@ -935,10 +867,6 @@ app.post('/action-wo/:id', requireLogin, handleUpload(upload.any()), (req, res) 
       (role === 'Super Admin' || String(wo.prepared_by) === String(userId)) &&
       wo.status === 'Draft'
     ) {
-      // Lampiran lama diambil dari data WO di database, BUKAN dari input klien.
-      // Kalau memakai req.body.old_lampiran, resubmit tanpa field itu akan menghapus
-      // referensi bukti/RAB sebelumnya (file jadi orphan) dan path lampiran bisa
-      // dipalsukan lewat request API ke file milik WO lain.
       let finalLampiran = wo.lampiran;
       if (req.files && req.files.length > 0) {
         const lampiranFiles = req.files.filter((file) => file.fieldname === 'lampiran_file');
@@ -953,16 +881,9 @@ app.post('/action-wo/:id', requireLogin, handleUpload(upload.any()), (req, res) 
         lokasi: textInput(req.body.lokasi || wo.lokasi),
         lampiran: finalLampiran,
         status: 'Submitted',
-        // Departemen TUJUAN boleh diperbaiki Pemohon saat mengajukan ulang (mis.
-        // salah kirim IT padahal harus Electrical). Nilai diambil dari form dan
-        // tetap divalidasi terhadap daftar departemen; kalau tidak valid, pakai
-        // departemen WO yang tersimpan supaya tujuan tidak pernah kosong.
         team: DEPARTMENTS.includes(req.body.team) ? req.body.team : wo.team,
-        // schedule_date & due_date TIDAK disentuh di sini: ini aksi Pemohon, dan jadwal
-        // pelaksanaan + tanggal jatuh tempo hanya boleh diisi oleh Team Tujuan
-        // (Supervisor/Team Leader) atau Manager/Super Admin. Nilai lama tetap dipertahankan.
         reject_reason: null,
-        submitted_at: new Date(), // reset timestamp submit
+        submitted_at: new Date(),
         reviewed_at: null,
         approved_at: null,
         reviewed_by: null,

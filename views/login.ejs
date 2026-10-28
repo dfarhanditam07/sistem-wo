@@ -40,10 +40,13 @@
 </div>
 
 <script>
-  <% if (flash) { %>
   const flashMsg = document.getElementById('flashMsg');
-  if (flashMsg) setTimeout(() => { flashMsg.style.opacity = '0'; setTimeout(() => flashMsg.remove(), 350); }, 4500);
-  <% } %>
+  if (flashMsg) {
+    setTimeout(() => {
+      flashMsg.style.opacity = '0';
+      setTimeout(() => flashMsg.remove(), 350);
+    }, 4500);
+  }
 </script>
 
 </body>

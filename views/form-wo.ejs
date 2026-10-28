@@ -63,14 +63,10 @@
       </div>
       <% } %>
 
-      <!-- Timeline Stepper (hanya untuk WO existing) -->
+      <!-- Timeline Stepper -->
       <% if (wo && timeline) { %>
       <div class="stepper-wrap">
         <div class="stepper">
-          <%#
-            Label tiap tahap diambil dari satu sumber (lib/work-order.js) supaya
-            istilah di stepper, filter dashboard, dan badge status tidak berbeda.
-          %>
           <%
              const stepMeta = {
                'Draft': { date: wo.created_at, icon: '📝' },
@@ -83,10 +79,10 @@
                'Closed': { date: wo.closed_at, icon: '🎉' },
              };
              const progressWidth = timeline.currentIdx >= 0
-               ? (timeline.currentIdx / (timeline.steps.length - 1)) * 88
+               ? Math.min(100, (timeline.currentIdx / (timeline.steps.length - 1)) * 88)
                : 0;
           %>
-          <div class="stepper-bar" style="width: <%= Math.min(100, progressWidth) %>%;"></div>
+          <div class="stepper-bar" style="--progress-width: <%= progressWidth %>%; width: var(--progress-width);"></div>
           <% timeline.steps.forEach((stepVal, i) => {
                const meta = stepMeta[stepVal] || {};
                let cls = '';
@@ -102,6 +98,15 @@
         </div>
       </div>
       <% } %>
+
+      <!-- Data Konfigurasi & Export disimpan via Data Attributes agar aman dari Linter JS -->
+      <div id="woAppConfig"
+        data-max-file-size-mb="<%= typeof maxFileSizeMB !== 'undefined' ? maxFileSizeMB : 10 %>"
+        data-max-upload-files="<%= typeof maxUploadFiles !== 'undefined' ? maxUploadFiles : 5 %>"
+        data-wo="<%= wo ? JSON.stringify(wo) : '' %>"
+        data-status-label="<%= wo ? statusLabel(wo.status) : '' %>"
+        style="display: none;">
+      </div>
 
       <div class="doc-paper">
         <table>
@@ -224,20 +229,11 @@
             </tr>
           </table>
 
-          <%# Field "Keterangan Material Request (MR)" dihapus: informasi kendala MR
-              sudah tercakup oleh catatan persetujuan SPV/TL dan catatan pelaksana.
-              Tautan evidence tetap ditampilkan agar bukti pekerjaan yang tersimpan
-              (diunggah saat Close) masih dapat dibuka. %>
           <% if (wo && wo.evidence) { %>
           <p class="mt-16"><strong>Evidence pekerjaan:</strong> <a href="<%= wo.evidence %>" target="_blank"
               rel="noopener">Buka file</a></p>
           <% } %>
 
-          <%# Hak edit jadwal dihitung di backend (lib/work-order.js) supaya frontend
-              dan backend tidak pernah berbeda aturan. Jadwal Pelaksanaan & Tanggal
-              Jatuh Tempo disetor oleh SPV/TL departemen tujuan sekaligus saat menekan
-              Approve (aksi spv_approve), atau dikoreksi Manager/Super Admin lewat aksi
-              update data WO. %>
           <% const scheduleEditable = typeof canEditSchedule !== 'undefined' && canEditSchedule; %>
           <% const scheduleRequired =
                Boolean(wo) && wo.status === 'Reviewed' && typeof canHandleWork !== 'undefined' && canHandleWork; %>
@@ -333,8 +329,6 @@
           <input type="hidden" name="reject_reason" id="rejectReasonHidden" value="">
 
           <%
-            // Ringkasan hak aksi per tahap. Dipakai untuk menentukan apakah panel
-            // aksi (Lembar Pengajuan) perlu ditampilkan sama sekali.
             const canUpdate = Boolean(wo && canManage);
             const canSubmitNew = !wo;
             const canResubmit = Boolean(wo && wo.status === 'Draft' &&
@@ -428,8 +422,6 @@
 
           <div class="section-title">LEMBAR PERSETUJUAN/PENYELESAIAN PEKERJAAN</div>
 
-          <%# Pelaksana = SPV/TL departemen tujuan (dihitung backend). Detail pekerjaan
-              dan completion status hanya bisa diisi pelaksana saat status In Progress. %>
           <% const workEditable = typeof canHandleWork !== 'undefined' && canHandleWork && wo && wo.status === 'In Progress'; %>
           <% const workFinished = Boolean(wo && ['Completed', 'Verified', 'Closed'].includes(wo.status)); %>
           <table class="form-table">
@@ -495,7 +487,6 @@
             </tr>
           </table>
 
-          <%# Tombol per tahap. Pelaksana (canHandleWork) = SPV/TL departemen tujuan atau Super Admin. %>
           <% if (workEditable) { %>
           <div class="doc-actions no-print">
             <button type="submit" name="action" value="complete" class="btn btn-warning btn-lg" onclick="showLoading();">
@@ -577,25 +568,23 @@
 <%- include('partials/shell-scripts') %>
 
 <script>
+  // ====== Config element ======
+  const configEl = document.getElementById('woAppConfig');
+  const MAX_FILE_SIZE_MB = configEl ? parseFloat(configEl.dataset.maxFileSizeMb) || 10 : 10;
+  const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+  const MAX_UPLOAD_FILES = configEl ? parseInt(configEl.dataset.maxUploadFiles, 10) || 5 : 5;
+  const ALLOWED_FILE_EXT = ['jpg', 'jpeg', 'png', 'pdf'];
+
   // ====== Loading helpers ======
   function showLoadingAfter(ms) { setTimeout(showLoading, ms); }
 
-  // Mengganti departemen tujuan saat membuat WO baru: form dimuat ulang dengan
-  // ?team=... supaya nomor WO otomatis dibuat ulang server untuk departemen
-  // tersebut (pola yang sama dengan tombol "Buat WO Baru" milik Manager).
   function reloadForTeam(team) {
     if (!team) return;
     showLoading();
     window.location.href = '/create-wo?team=' + encodeURIComponent(team);
   }
 
-  // ====== Validasi ukuran & tipe file di sisi klien ======
-  // Batas ini SELALU sinkron dengan backend (Multer) karena nilainya dikirim dari app.locals.
-  const MAX_FILE_SIZE_MB = <%= typeof maxFileSizeMB !== 'undefined' ? maxFileSizeMB : 10 %>;
-  const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
-  const MAX_UPLOAD_FILES = <%= typeof maxUploadFiles !== 'undefined' ? maxUploadFiles : 5 %>;
-  const ALLOWED_FILE_EXT = ['jpg', 'jpeg', 'png', 'pdf'];
-
+  // ====== Validasi ukuran & tipe file ======
   function validateFileInput(input) {
     if (input.files.length > MAX_UPLOAD_FILES) {
       alert(`Maksimal ${MAX_UPLOAD_FILES} file dapat diunggah sekaligus.`);
@@ -618,7 +607,7 @@
     return true;
   }
 
-  // ====== Reject Modal (Manager & SPV) ======
+  // ====== Reject Modal ======
   (function initRejectModal() {
     const modal = document.getElementById('rejectModal');
     if (!modal) return;
@@ -654,9 +643,6 @@
         return;
       }
       reasonHidden.value = v;
-      // Submit form dengan action=reject. Validasi HTML dimatikan untuk jalur ini
-      // supaya field wajib (mis. jadwal & jatuh tempo saat tahap persetujuan SPV/TL)
-      // tidak menghalangi penolakan WO.
       const fakeBtn = document.createElement('button');
       fakeBtn.type = 'submit';
       fakeBtn.formNoValidate = true;
@@ -669,16 +655,19 @@
     });
   })();
 
-  // ====== Export helpers (lightweight, no library needed) ======
+  // ====== Export helpers ======
   function exportAsExcel() {
-    const wo = <%- wo ? JSON.stringify(wo) : 'null' %>;
+    if (!configEl || !configEl.dataset.wo) return;
+    const wo = JSON.parse(configEl.dataset.wo);
+    const statusLabelText = configEl.dataset.statusLabel || '';
     if (!wo) return;
+
     const rows = [
       ['Internal Work Order - PT. EKA NURI'],
       ['Tanggal Export:', new Date().toLocaleString('id-ID')],
       [],
       ['Nomor WO', wo.no_wo || ''],
-      ['Status', <%- wo ? JSON.stringify(statusLabel(wo.status)) : "''" %>],
+      ['Status', statusLabelText],
       ['Departemen', wo.team || ''],
       ['Uraian Pekerjaan', wo.uraian_pekerjaan || ''],
       ['Lokasi', wo.lokasi || ''],
@@ -695,18 +684,23 @@
       ['Completion Status', wo.completion_status || ''],
       ['Evidence', wo.evidence || ''],
     ];
-    const csv = rows.map(r => r.map(c => { const v = String(c ?? '').replace(/"/g, '""'); return /[\n,;"]/.test(v) ? `"${v}"` : v; }).join(',')).join('\r\n');
+
+    const csv = rows.map(r => r.map(c => {
+      const v = String(c ?? '').replace(/"/g, '""');
+      return /[\n,;"]/.test(v) ? `"${v}"` : v;
+    }).join(',')).join('\r\n');
+
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `WO_${(wo.no_wo || 'export').replace(/[^a-zA-Z0-9_-]/g, '_')}.csv`;
-    document.body.appendChild(a); a.click();
+    document.body.appendChild(a);
+    a.click();
     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
   }
 
   function exportAsHtmlPdf() {
-    // Trigger print dialog sebagai cara tercepat dapat PDF (user pilih Save as PDF)
     window.print();
   }
 </script>

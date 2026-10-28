@@ -83,8 +83,8 @@
             <%= t %>
           </div>
           <div class="team-bar">
-            <div class="team-bar-fill" style="width:<%= pctPending %>%; background: linear-gradient(90deg, var(--warning), #fb923c);" title="Pending"></div>
-            <div class="team-bar-fill" style="width:<%= pctDone %>%; background: linear-gradient(90deg, var(--success), var(--info));" title="Selesai"></div>
+            <div class="team-bar-fill" style="--bar-width: <%= pctPending %>%; width: var(--bar-width); background: linear-gradient(90deg, var(--warning), #fb923c);" title="Pending"></div>
+            <div class="team-bar-fill" style="--bar-width: <%= pctDone %>%; width: var(--bar-width); background: linear-gradient(90deg, var(--success), var(--info));" title="Selesai"></div>
           </div>
           <div class="team-meta">
             <span>Total: <strong><%= ts.total %></strong></span>
@@ -212,7 +212,7 @@
                   <%= wo.lokasi.length > 25 ? wo.lokasi.substring(0, 25) + '...' : wo.lokasi %></td>
                 <td class="nowrap">
                   <div class="dim">Jadwal: <%= wo.schedule_date ? new Date(wo.schedule_date).toLocaleDateString('id-ID') : '-' %></div>
-                  <div style="color:<%= wo.is_overdue ? 'var(--danger)' : 'var(--text-muted)' %>;">
+                  <div class="<%= wo.is_overdue ? 'is-overdue' : '' %>" style="--due-color: <%= wo.is_overdue ? 'var(--danger)' : 'var(--text-muted)' %>; color: var(--due-color);">
                     Jatuh tempo: <%= wo.due_date ? new Date(wo.due_date).toLocaleDateString('id-ID') : '-' %>
                   </div>
                 </td>

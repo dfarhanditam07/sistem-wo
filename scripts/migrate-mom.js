@@ -19,9 +19,6 @@ function quoteEnumValue(value) {
   return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "''")}'`;
 }
 
-// Label tim lama ('HW'/'JGC') diganti ke nama resmi MOM ('HW (Area)'/'JGC (Area)').
-// Idempoten: hanya baris yang masih memakai label lama yang disentuh, sehingga
-// skrip aman dijalankan berulang tanpa mengubah data yang sudah dinormalkan.
 const LEGACY_TEAM_MAPPING = [
   ['HW', 'HW (Area)'],
   ['JGC', 'JGC (Area)'],
@@ -61,10 +58,6 @@ function readEnumValues(columnType) {
   return values;
 }
 
-// MariaDB mengembalikan COLUMN_DEFAULT untuk ENUM dalam bentuk yang sudah dikutip
-// ('Draft'), sedangkan MySQL mengembalikan tanpa kutip (Draft). Tanpa dilepas,
-// nilai default akan terkirim ganda kutip ('''Draft''') dan ALTER TABLE gagal
-// dengan "Invalid default value".
 function readEnumDefault(value) {
   if (value === null || value === undefined) return null;
   const text = String(value);
@@ -161,12 +154,7 @@ async function migrate() {
 
     await appendEnumValues(connection, process.env.DB_NAME, 'users', 'team', departments);
     await appendEnumValues(connection, process.env.DB_NAME, 'work_orders', 'team', departments);
-    // Tahap 'Verified' (SPV/TL memeriksa hasil pekerjaan) butuh nilai enum baru.
-    // 'In Progress' sudah ada di skema sejak awal dan kini benar-benar dipakai.
     await appendEnumValues(connection, process.env.DB_NAME, 'work_orders', 'status', ['Verified']);
-
-    // Setelah nilai enum memuat nama area resmi, normalkan baris lama yang masih
-    // memakai label 'HW'/'JGC' agar cocok dengan daftar departemen aplikasi.
     await mapLegacyTeamLabels(connection);
 
     const workOrderColumns = [
